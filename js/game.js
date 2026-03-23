@@ -4,6 +4,7 @@ import { audioManager, toggleSfxMute, toggleMusicMute, syncAllAudioUI, restoreAu
 import { DOM, gameState, curves, player, obstacles, bonuses, coins, spinTargets, inputQueue, getBestScore, getBestDistance, setBestScore, setBestDistance } from './state.js';
 import { resetGameSessionState, update } from './physics.js';
 import { createGameRenderer, getCanvasSize } from './renderers/index.js';
+import { createRenderSnapshot } from './render-snapshot.js';
 import { particlePool, spawnParticles, updateParticles } from './particles.js';
 import { assetManager } from './assets.js';
 import { showBonusText, showStore, hideStore, updateUI, updateGameOverLeaderboardNotice } from './ui.js';
@@ -46,21 +47,9 @@ function getCanvasDimensions() {
   return { width, height };
 }
 
-function buildRenderSnapshot(time, delta) {
+function buildRenderSnapshot(_time, _delta) {
   const viewport = getCanvasDimensions();
-  return {
-    time,
-    delta,
-    viewport,
-    running: gameState.running,
-    state: gameState,
-    curves,
-    player,
-    obstacles,
-    bonuses,
-    coins,
-    spinTargets
-  };
+  return createRenderSnapshot(viewport);
 }
 
 function getSpinCooldownReductionSeconds() {

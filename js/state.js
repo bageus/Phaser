@@ -79,7 +79,7 @@ import { CONFIG, isMobile } from './config.js';
 
 /* ===== DOM CACHE ===== */
 const DOM = {
-  canvas: document.getElementById("game"),
+  gameViewport: document.getElementById("gameViewport"),
   gameStart: document.getElementById("gameStart"),
   gameOver: document.getElementById("gameOver"),
 
@@ -106,7 +106,8 @@ const DOM = {
   storeBtn: document.getElementById("storeBtn")
 };
 
-const ctx = DOM.canvas.getContext("2d", { alpha: false, antialias: false });
+const offscreenCanvas = document.createElement("canvas");
+const ctx = offscreenCanvas.getContext("2d", { alpha: false, antialias: false });
 
 
 /* ===== GAME STATE ===== */

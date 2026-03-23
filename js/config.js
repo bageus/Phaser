@@ -1,10 +1,9 @@
 /* ===== CONFIG ===== */
 const BACKEND_URL = "https://ursassbackend-production.up.railway.app";
 const urlParams = new URLSearchParams(window.location.search);
-const requestedRenderer = (urlParams.get('renderer') || localStorage.getItem('rendererBackend') || 'canvas').trim().toLowerCase();
+const requestedRenderer = 'phaser';
 const explicitBackendMode = urlParams.get('backend');
-const storedBackendMode = localStorage.getItem('backendMode');
-const backendMode = (explicitBackendMode || (requestedRenderer === 'phaser' ? 'off' : storedBackendMode || 'live')).trim().toLowerCase();
+const backendMode = (explicitBackendMode || 'off').trim().toLowerCase();
 const BACKEND_DISABLED = backendMode === 'off' || backendMode === 'offline' || backendMode === 'mock';
 console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 console.log(`🧪 Backend mode: ${BACKEND_DISABLED ? 'offline' : 'live'}`);
@@ -70,15 +69,10 @@ if (isMobile) {
 }
 
 const RENDER_BACKENDS = Object.freeze({
-  CANVAS: 'canvas',
   PHASER: 'phaser'
 });
 
-const DEFAULT_RENDER_BACKEND = (() => {
-  const params = new URLSearchParams(window.location.search);
-  const requested = params.get('renderer') || localStorage.getItem('rendererBackend') || RENDER_BACKENDS.CANVAS;
-  return requested === RENDER_BACKENDS.PHASER ? RENDER_BACKENDS.PHASER : RENDER_BACKENDS.CANVAS;
-})();
+const DEFAULT_RENDER_BACKEND = RENDER_BACKENDS.PHASER;
 
 const BONUS_TYPES = {
   SHIELD: "shield",

@@ -40,7 +40,7 @@ function resizeCanvas() {
 
   // 2. Parent element getBoundingClientRect (works when gameContainer is visible)
   if (w === 0 || h === 0) {
-    const parent = DOM.canvas.parentElement;
+    const parent = DOM.gameViewport;
     if (parent) {
       const rect = parent.getBoundingClientRect();
       w = rect.width;
@@ -76,10 +76,11 @@ function resizeCanvas() {
   canvasW = cssW;
   canvasH = cssH;
 
-  DOM.canvas.width = Math.round(cssW * dpr);
-  DOM.canvas.height = Math.round(cssH * dpr);
-  DOM.canvas.style.width = cssW + 'px';
-  DOM.canvas.style.height = cssH + 'px';
+  const backingCanvas = ctx?.canvas;
+  if (backingCanvas) {
+    backingCanvas.width = Math.round(cssW * dpr);
+    backingCanvas.height = Math.round(cssH * dpr);
+  }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
   ctx.imageSmoothingEnabled = false;

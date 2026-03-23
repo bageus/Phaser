@@ -80,7 +80,7 @@ export function createRenderSnapshot(viewport) {
 
   return {
     schemaVersion: 1,
-    backend: /** @type {RenderBackend} */ ('canvas'),
+    backend: /** @type {RenderBackend} */ ('phaser'),
     viewport: {
       width,
       height,

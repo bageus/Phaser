@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { isAuthenticated, saveResultToLeaderboard, loadAndDisplayLeaderboard, updateWalletUI, resetWalletPlayerUI, resetLeaderboardUI } from './api.js';
 import { audioManager, toggleSfxMute, toggleMusicMute, syncAllAudioUI, restoreAudioSettings, initAudioToggles } from './audio.js';
-import { DOM, gameState, curves, player, obstacles, bonuses, coins, spinTargets, ctx, inputQueue, getBestScore, getBestDistance, setBestScore, setBestDistance } from './state.js';
+import { DOM, gameState, curves, player, obstacles, bonuses, coins, spinTargets, inputQueue, getBestScore, getBestDistance, setBestScore, setBestDistance } from './state.js';
 import { resetGameSessionState, update } from './physics.js';
 import { createGameRenderer, getCanvasSize } from './renderers/index.js';
 import { particlePool, spawnParticles, updateParticles } from './particles.js';
@@ -38,8 +38,8 @@ async function resetAuthenticatedUiState() {
 }
 
 function getCanvasDimensions() {
-  const fallbackW = DOM.canvas?.clientWidth || window.innerWidth || 360;
-  const fallbackH = DOM.canvas?.clientHeight || window.innerHeight || 640;
+  const fallbackW = DOM.gameViewport?.clientWidth || window.innerWidth || 360;
+  const fallbackH = DOM.gameViewport?.clientHeight || window.innerHeight || 640;
   const { width: rendererWidth, height: rendererHeight } = getCanvasSize();
   const width = Number.isFinite(rendererWidth) && rendererWidth > 0 ? rendererWidth : fallbackW;
   const height = Number.isFinite(rendererHeight) && rendererHeight > 0 ? rendererHeight : fallbackH;
@@ -542,50 +542,11 @@ async function gameLoop(time) {
   debugStats.updateMs = 0;
   debugStats.uiMs = 0;
   debugStats.frameMs = 0;
-  const { width: canvasW, height: canvasH } = getCanvasDimensions();
-   // Если canvas всё ещё 0×0, попробовать resize
-  if (DOM.canvas.width === 0 || DOM.canvas.height === 0) {
+  const { width: viewportW, height: viewportH } = getCanvasDimensions();
+  if (viewportW === 0 || viewportH === 0) {
     activeRenderer?.resize(buildRenderSnapshot(time, 0));
   }
   if (!assetManager.isReady()) {
-    const progress = assetManager.getProgress();
-    ctx.clearRect(0, 0, canvasW, canvasH);
-
-    const bgGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
-    bgGrad.addColorStop(0, "#0a0a15");
-    bgGrad.addColorStop(1, "#15080f");
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, canvasW, canvasH);
-
-    ctx.fillStyle = "#c084fc";
-    ctx.font = "bold 28px Orbitron, Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText("Ursas Tube", canvasW / 2, canvasH * 0.38);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "16px Orbitron, Arial";
-    ctx.textBaseline = "middle";
-    ctx.fillText("⏳ Loading...", canvasW / 2, canvasH * 0.5);
-
-    const barWidth = canvasW * 0.35;
-    const barHeight = 25;
-    const barX = canvasW / 2 - barWidth / 2;
-    const barY = canvasH * 0.55;
-
-    ctx.strokeStyle = "#c084fc";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
-
-    ctx.fillStyle = "#c084fc";
-    ctx.fillRect(barX + 3, barY + 3, (barWidth - 6) * (progress / 100), barHeight - 6);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 14px Orbitron, Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(`${Math.floor(progress)}%`, canvasW / 2, barY + barHeight / 2);
-
     requestAnimationFrame(gameLoop);
     return;
   }
@@ -603,15 +564,6 @@ async function gameLoop(time) {
 
   perfMonitor.updateFPS();
 
-  ctx.clearRect(0, 0, canvasW, canvasH);
-
-  if (!_cachedBgGrad) {
-    _cachedBgGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
-    _cachedBgGrad.addColorStop(0, "#0a0a15");
-    _cachedBgGrad.addColorStop(1, "#15080f");
-  }
-  ctx.fillStyle = _cachedBgGrad;
-  ctx.fillRect(0, 0, canvasW, canvasH);
 
   try {
     const drawStart = performance.now();

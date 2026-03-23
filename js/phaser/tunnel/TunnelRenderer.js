@@ -112,13 +112,24 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.closePath();
 }
 
-function drawQuadTexture(graphics, points, rows, columns, color, alpha, skew = 0.5) {
+function drawQuadTexture(
+  graphics,
+  points,
+  rows,
+  columns,
+  color,
+  alpha,
+  skew = 0.5,
+  rowOffset = 0,
+) {
   const safeRows = Math.max(1, rows);
   const safeColumns = Math.max(1, columns);
   graphics.lineStyle(1, color, alpha);
 
   for (let row = 1; row <= safeRows; row += 1) {
-    const t = row / (safeRows + 1);
+    const baseT = row / (safeRows + 1);
+    const t =
+      ((((baseT + rowOffset) % 1) + 1) % 1) * 0.88 + 0.06;
     graphics.beginPath();
     graphics.moveTo(
       lerp(points.x1, points.x4, t),
@@ -607,7 +618,9 @@ class TunnelRenderer {
         0.04,
         depthFogStrength + 0.08,
       );
+      const speedFlow = clamp(tube.speed / Math.max(CONFIG.SPEED_START, 0.0001), 1, 12);
       const conveyorPhase = tube.scroll * 0.009 + depth * 0.18;
+      const conveyorTravel = tube.scroll * (0.006 + speedFlow * 0.0009);
 
       for (let i = 0; i < segmentCount; i += quality.segmentStep) {
         const boundaryA =
@@ -668,10 +681,13 @@ class TunnelRenderer {
           0.42,
         );
         const laneBand = getLaneBandFactor(segmentMid - tube.rotation * 0.22);
-        const beltMotion = 0.5 + 0.5 * Math.sin(conveyorPhase + i * 0.82);
+        const beltPhase = conveyorPhase + i * 0.82;
+        const beltMotion = 0.5 + 0.5 * Math.sin(beltPhase);
         const seamPulse =
           0.5 + 0.5 * Math.sin(tube.scroll * 0.013 - depth * 0.42 + i * 0.35);
         const edgeHighlight = Math.max(0, Math.cos(segmentMid - Math.PI * 0.5));
+        const treadOffset = ((conveyorTravel - depthRatio * 2.4 + i * 0.09) % 1 + 1) % 1;
+        const treadPulse = 0.5 + 0.5 * Math.sin(beltPhase - depthRatio * 8.5);
 
         let fillColor = getSegmentColor(segmentMid, i, colorBoost);
         fillColor = blendColor(
@@ -743,6 +759,7 @@ class TunnelRenderer {
           tileTextureColor,
           clamp(0.05 + lampFactor * 0.08 + beltMotion * 0.06, 0.04, 0.2),
           ((depth + i) % 3) / 2,
+          treadOffset,
         );
 
         if (qualityName !== "low") {
@@ -790,24 +807,44 @@ class TunnelRenderer {
           this.lightGraphics.strokePath();
         }
 
+        const runnerDepth = clamp(0.12 + treadOffset * 0.76, 0.12, 0.88);
+        const runnerBand = clamp(0.08 + boostRatio * 0.04, 0.08, 0.16);
+        const runnerStart = clamp(runnerDepth - runnerBand, 0.06, 0.9);
+        const runnerEnd = clamp(runnerDepth + runnerBand, 0.1, 0.94);
         const runnerAlpha = clamp(
-          0.02 + beltMotion * 0.1 + boostRatio * 0.08,
-          0.02,
-          0.22,
+          0.04 + treadPulse * 0.11 + boostRatio * 0.1,
+          0.04,
+          0.28,
         );
         this.lightGraphics.lineStyle(
           qualityName === "high" ? 2 : 1,
-          blendColor(0x6ef1ff, tintColor, 0.36),
+          blendColor(0x6ef1ff, tintColor, 0.36 + treadPulse * 0.14),
           runnerAlpha,
         );
         this.lightGraphics.beginPath();
         this.lightGraphics.moveTo(
-          lerp(topLx, bottomLx, 0.16),
-          lerp(topLy, bottomLy, 0.16),
+          lerp(topLx, bottomLx, runnerStart),
+          lerp(topLy, bottomLy, runnerStart),
         );
         this.lightGraphics.lineTo(
-          lerp(topRx, bottomRx, 0.16),
-          lerp(topRy, bottomRy, 0.16),
+          lerp(topRx, bottomRx, runnerStart),
+          lerp(topRy, bottomRy, runnerStart),
+        );
+        this.lightGraphics.strokePath();
+
+        this.lightGraphics.lineStyle(
+          1,
+          blendColor(0xffffff, tintColor, 0.24 + lampFactor * 0.2),
+          runnerAlpha * 0.7,
+        );
+        this.lightGraphics.beginPath();
+        this.lightGraphics.moveTo(
+          lerp(topLx, bottomLx, runnerEnd),
+          lerp(topLy, bottomLy, runnerEnd),
+        );
+        this.lightGraphics.lineTo(
+          lerp(topRx, bottomRx, runnerEnd),
+          lerp(topRy, bottomRy, runnerEnd),
         );
         this.lightGraphics.strokePath();
 

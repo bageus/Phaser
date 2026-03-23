@@ -769,7 +769,7 @@ class TunnelRenderer {
         if (qualityName !== "low") {
           this.baseGraphics.lineStyle(
             1,
-            blendColor(0xfdd2f1, tintColor, 0.16),
+            blendColor(fillColor, tintColor, 0.18),
             clamp(
               0.015 + lampFactor * 0.18 + seamPulse * 0.02,
               0.01,
@@ -787,7 +787,7 @@ class TunnelRenderer {
           );
         }
 
-        const seamColor = blendColor(0xb7ecff, tintColor, 0.4);
+        const seamColor = blendColor(fillColor, tintColor, 0.26);
         const seamAlpha = clamp(
           0.01 + lampFactor * 0.18 + seamPulse * 0.03,
           0.01,
@@ -802,8 +802,8 @@ class TunnelRenderer {
         if ((i / quality.segmentStep + depth) % 2 === 0) {
           this.lightGraphics.lineStyle(
             1,
-            blendColor(0xfff0ff, tintColor, 0.28),
-            seamAlpha * 0.7,
+            blendColor(fillColor, tintColor, 0.22),
+            seamAlpha * 0.32,
           );
           this.lightGraphics.beginPath();
           this.lightGraphics.moveTo(topLx, topLy);
@@ -838,7 +838,7 @@ class TunnelRenderer {
 
         this.lightGraphics.lineStyle(
           1,
-          blendColor(0xffffff, tintColor, 0.24 + lampFactor * 0.2),
+          blendColor(0x7fdcff, tintColor, 0.28 + lampFactor * 0.18),
           runnerAlpha * 0.7,
         );
         this.lightGraphics.beginPath();

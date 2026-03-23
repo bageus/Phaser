@@ -120,25 +120,37 @@ export function createRenderSnapshot(viewport) {
     obstacles: obstacles.map((item) => ({
       lane: item.lane,
       z: item.z,
-      type: item.type,
+      type: item.type ?? null,
+      subtype: item.subtype ?? null,
       variant: item.variant ?? null,
+      animFrame: item.animFrame ?? 0,
+      size: item.size ?? null,
       passed: Boolean(item.passed)
     })),
     bonuses: bonuses.map((item) => ({
       lane: item.lane,
       z: item.z,
       type: item.type,
+      animFrame: item.animFrame ?? 0,
+      size: item.size ?? null,
       active: Boolean(item.active ?? true)
     })),
     coins: coins.map((item) => ({
       lane: item.lane,
       z: item.z,
+      angle: item.angle ?? null,
+      radiusFactor: item.radiusFactor ?? null,
+      spinOnly: Boolean(item.spinOnly),
+      animFrame: item.animFrame ?? 0,
       type: item.type ?? 'silver',
       collected: Boolean(item.collected)
     })),
     spinTargets: spinTargets.map((item) => ({
       lane: item.lane,
       z: item.z,
+      angle: item.angle ?? null,
+      radiusFactor: item.radiusFactor ?? null,
+      collected: Boolean(item.collected),
       kind: item.kind ?? 'spin'
     })),
     fx: {

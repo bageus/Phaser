@@ -95,12 +95,13 @@ function getLaneBandFactor(angle) {
   return wrapped > 0 ? Math.pow(wrapped, 2) : 0;
 }
 
-function getLampProximity(distance) {
+function getLampTravelMetrics(distance) {
   const wrapped =
     ((distance % LIGHT_INTERVAL_METERS) + LIGHT_INTERVAL_METERS) %
     LIGHT_INTERVAL_METERS;
-  const nearest = Math.min(wrapped, LIGHT_INTERVAL_METERS - wrapped);
-  return clamp(1 - nearest / LIGHT_REACH_METERS, 0, 1);
+  const progress = wrapped / LIGHT_INTERVAL_METERS;
+  const intensity = clamp(1 - Math.abs(progress - 0.18) / 0.2, 0, 1);
+  return { progress, intensity };
 }
 
 function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
@@ -492,26 +493,28 @@ class TunnelRenderer {
 
   drawLampGlow(centerX, centerY, tube, tintColor, qualityName) {
     const distance = this.snapshot?.runtime?.distance || 0;
-    const lampCycle = getLampProximity(distance);
-    if (lampCycle <= 0.001) return;
+    const lampTravel = getLampTravelMetrics(distance);
+    if (lampTravel.intensity <= 0.001) return;
 
     const lampCount = qualityName === "low" ? 3 : 5;
     const lampSpread = Math.PI * 0.28;
     const baseAngle = -Math.PI / 2 + tube.rotation * 0.08;
     const lampColor = blendColor(0x8ce6ff, tintColor, 0.36);
-    const radius = CONFIG.TUBE_RADIUS * 0.94;
+    const depthPull = lerp(0.3, 1, lampTravel.progress);
+    const radius = CONFIG.TUBE_RADIUS * (0.2 + depthPull * 0.74);
+    const lampHeight = lerp(0.45, 1, depthPull);
 
     for (let i = 0; i < lampCount; i += 1) {
       const t = lampCount === 1 ? 0.5 : i / (lampCount - 1);
       const angle = baseAngle - lampSpread * 0.5 + lampSpread * t;
       const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius * CONFIG.PLAYER_OFFSET;
-      const width = qualityName === "high" ? 42 : 32;
-      const height = qualityName === "high" ? 10 : 8;
+      const y = centerY + Math.sin(angle) * radius * CONFIG.PLAYER_OFFSET * lampHeight;
+      const width = (qualityName === "high" ? 42 : 32) * lerp(0.42, 1, depthPull);
+      const height = (qualityName === "high" ? 10 : 8) * lerp(0.5, 1, depthPull);
       const alpha = clamp(
-        0.18 + lampCycle * (0.34 - Math.abs(t - 0.5) * 0.16),
-        0.16,
-        0.44,
+        0.12 + lampTravel.intensity * (0.34 - Math.abs(t - 0.5) * 0.16),
+        0.1,
+        0.46,
       );
 
       this.lightGraphics.fillStyle(blendColor(0xc8f6ff, lampColor, 0.3), alpha);
@@ -524,7 +527,7 @@ class TunnelRenderer {
       );
       this.lightGraphics.fillStyle(
         blendColor(lampColor, 0xffffff, 0.48),
-        alpha * 0.46,
+        alpha * (0.24 + depthPull * 0.3),
       );
       this.lightGraphics.fillEllipse(
         x,
@@ -607,7 +610,8 @@ class TunnelRenderer {
       const bend2 = 1 - scale2;
       const depthRatio = 1 - depth / maxDepth;
       const depthMeters = distance + depth * 1.35;
-      const lampFactor = getLampProximity(depthMeters);
+      const lampTravel = getLampTravelMetrics(depthMeters);
+      const lampFactor = lampTravel.intensity;
       const localBrightness = clamp(
         0.22 + lampFactor * 0.5 + boostRatio * 0.14,
         0.16,
@@ -620,7 +624,7 @@ class TunnelRenderer {
       );
       const speedFlow = clamp(tube.speed / Math.max(CONFIG.SPEED_START, 0.0001), 1, 12);
       const conveyorPhase = tube.scroll * 0.009 + depth * 0.18;
-      const conveyorTravel = tube.scroll * (0.006 + speedFlow * 0.0009);
+      const conveyorTravel = tube.scroll * (0.014 + speedFlow * 0.0016) + depthRatio * 0.75;
 
       for (let i = 0; i < segmentCount; i += quality.segmentStep) {
         const boundaryA =
@@ -686,7 +690,7 @@ class TunnelRenderer {
         const seamPulse =
           0.5 + 0.5 * Math.sin(tube.scroll * 0.013 - depth * 0.42 + i * 0.35);
         const edgeHighlight = Math.max(0, Math.cos(segmentMid - Math.PI * 0.5));
-        const treadOffset = ((conveyorTravel - depthRatio * 2.4 + i * 0.09) % 1 + 1) % 1;
+        const treadOffset = ((conveyorTravel - depthRatio * 3.2 + i * 0.14) % 1 + 1) % 1;
         const treadPulse = 0.5 + 0.5 * Math.sin(beltPhase - depthRatio * 8.5);
 
         let fillColor = getSegmentColor(segmentMid, i, colorBoost);
@@ -1044,7 +1048,7 @@ class TunnelRenderer {
       CONFIG.TUBE_RADIUS * 2 * CONFIG.PLAYER_OFFSET,
     );
 
-    const lampNow = getLampProximity(snapshot?.runtime?.distance || 0);
+    const lampNow = getLampTravelMetrics(snapshot?.runtime?.distance || 0).intensity;
     this.debugText?.setText([
       "Phaser Tunnel Debug",
       `rotation: ${tube.rotation.toFixed(3)}`,

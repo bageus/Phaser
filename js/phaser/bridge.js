@@ -5,8 +5,8 @@ const PHASER_HOST_ID = 'phaser-root';
 const DPR_MAX = 2;
 
 function getViewportMetrics() {
-  const fallbackWidth = DOM.canvas?.clientWidth || window.innerWidth || 360;
-  const fallbackHeight = DOM.canvas?.clientHeight || window.innerHeight || 640;
+  const fallbackWidth = DOM.gameViewport?.clientWidth || window.innerWidth || 360;
+  const fallbackHeight = DOM.gameViewport?.clientHeight || window.innerHeight || 640;
   const width = Math.max(1, Math.round(fallbackWidth));
   const height = Math.max(1, Math.round(fallbackHeight));
   const resolution = Math.min(window.devicePixelRatio || 1, DPR_MAX);
@@ -15,7 +15,7 @@ function getViewportMetrics() {
 }
 
 function ensureHost() {
-  const parent = DOM.canvas?.parentElement;
+  const parent = DOM.gameViewport;
   if (!parent) {
     throw new Error('Phaser host parent is unavailable');
   }

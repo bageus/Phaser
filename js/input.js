@@ -66,6 +66,12 @@ function initInputHandlers() {
   inputHandlersInitialized = true;
 }
 
+function getViewportCenter() {
+  const width = DOM.gameViewport?.clientWidth || window.innerWidth || 360;
+  const height = DOM.gameViewport?.clientHeight || window.innerHeight || 640;
+  return { x: width / 2, y: height / 2 };
+}
+
 function triggerSpin() {
   if (gameState.spinCooldown > 0 || gameState.spinActive || player.isLaneTransition || getLaneCooldown() > 0) return;
 
@@ -92,7 +98,8 @@ function triggerSpin() {
 
   player.isSpin = true;
   audioManager.playSFX('spin');
-  spawnParticles(DOM.canvas.width / 2, DOM.canvas.height / 2, 'rgba(200, 100, 255, 1)', 25, 10);
+  const { x, y } = getViewportCenter();
+  spawnParticles(x, y, 'rgba(200, 100, 255, 1)', 25, 10);
 }
 
 export { isInteractiveElement, initInputHandlers, triggerSpin };

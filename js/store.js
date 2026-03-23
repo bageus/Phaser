@@ -241,7 +241,9 @@ async function loadUnauthGameConfig() {
   }
 
   console.error('❌ Error loading unauth runtime config:', lastError);
-  return null;
+  applyRuntimeConfig(OFFLINE_RUNTIME_CONFIG);
+  console.log('🧪 Falling back to offline runtime config for frontend-only testing');
+  return runtimeGameConfig;
 }
 
 function clearRuntimeConfig() {

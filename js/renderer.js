@@ -269,8 +269,10 @@ class TubeRenderer {
     gameState.tubeRotation += rotSpeed * 0.01;
     gameState.tubeScroll += gameState.speed * 40;
 
-    const centerOffsetX = gameState.centerOffsetX;
-    const centerOffsetY = gameState.centerOffsetY;
+    // Keep the tunnel shell fixed in place; only gameplay elements should react
+    // to curve offsets so the pipe and its bezel do not drift on screen.
+    const centerOffsetX = 0;
+    const centerOffsetY = 0;
 
     updateSegmentColorCache();
     updateSegmentTrigCache();
@@ -477,8 +479,8 @@ function drawTube() { tubeRenderer.draw(); }
 
 function drawTubeDepth() {
   if (gameState.renderQuality === "low") return;
-  const cx = canvasW / 2 + gameState.centerOffsetX;
-  const cy = canvasH / 2 + gameState.centerOffsetY;
+  const cx = canvasW / 2;
+  const cy = canvasH / 2;
   if (!isFinite(cx) || !isFinite(cy)) return;
 
   const grad = ctx.createRadialGradient(cx, cy, CONFIG.TUBE_RADIUS * 0.1, cx, cy, CONFIG.TUBE_RADIUS);
@@ -493,8 +495,8 @@ function drawTubeDepth() {
 }
 
 function drawTubeCenter() {
-  const cx = canvasW / 2 + gameState.centerOffsetX;
-  const cy = canvasH / 2 + gameState.centerOffsetY;
+  const cx = canvasW / 2;
+  const cy = canvasH / 2;
   if (!isFinite(cx) || !isFinite(cy)) return;
 
   const outerR = CONFIG.TUBE_RADIUS * 0.18;

@@ -113,53 +113,6 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.closePath();
 }
 
-function drawQuadTexture(
-  graphics,
-  points,
-  rows,
-  columns,
-  color,
-  alpha,
-  skew = 0.5,
-  rowOffset = 0,
-) {
-  const safeRows = Math.max(1, rows);
-  const safeColumns = Math.max(1, columns);
-  graphics.lineStyle(1, color, alpha);
-
-  for (let row = 1; row <= safeRows; row += 1) {
-    const baseT = row / (safeRows + 1);
-    const t =
-      ((((baseT + rowOffset) % 1) + 1) % 1) * 0.88 + 0.06;
-    graphics.beginPath();
-    graphics.moveTo(
-      lerp(points.x1, points.x4, t),
-      lerp(points.y1, points.y4, t),
-    );
-    graphics.lineTo(
-      lerp(points.x2, points.x3, t),
-      lerp(points.y2, points.y3, t),
-    );
-    graphics.strokePath();
-  }
-
-  for (let column = 1; column <= safeColumns; column += 1) {
-    const t = column / (safeColumns + 1);
-    const skewedStart = clamp(t - (0.5 - skew) * 0.22, 0.06, 0.94);
-    const skewedEnd = clamp(t + (skew - 0.5) * 0.22, 0.06, 0.94);
-    graphics.beginPath();
-    graphics.moveTo(
-      lerp(points.x1, points.x2, skewedStart),
-      lerp(points.y1, points.y2, skewedStart),
-    );
-    graphics.lineTo(
-      lerp(points.x4, points.x3, skewedEnd),
-      lerp(points.y4, points.y3, skewedEnd),
-    );
-    graphics.strokePath();
-  }
-}
-
 function boostPulseFromSpeed(speed) {
   return clamp(
     (speed - BOOST_THRESHOLD) /
@@ -745,113 +698,6 @@ class TunnelRenderer {
         );
         this.baseGraphics.fillPath();
 
-        const tileTextureColor = blendColor(0xa7efff, tintColor, 0.34 + lampFactor * 0.18);
-        drawQuadTexture(
-          this.lightGraphics,
-          {
-            x1: topLx,
-            y1: topLy,
-            x2: topRx,
-            y2: topRy,
-            x3: bottomRx,
-            y3: bottomRy,
-            x4: bottomLx,
-            y4: bottomLy,
-          },
-          qualityName === "low" ? 1 : 2,
-          qualityName === "high" ? 3 : 2,
-          tileTextureColor,
-          clamp(0.015 + lampFactor * 0.14 + beltMotion * 0.02, 0.01, 0.18),
-          ((depth + i) % 3) / 2,
-          treadOffset,
-        );
-
-        if (qualityName !== "low") {
-          this.baseGraphics.lineStyle(
-            1,
-            blendColor(0xfdd2f1, tintColor, 0.16),
-            clamp(
-              0.015 + lampFactor * 0.18 + seamPulse * 0.02,
-              0.01,
-              quality.rimAlpha * 0.72,
-            ),
-          );
-          this.baseGraphics.strokePoints(
-            [
-              { x: x1, y: y1 },
-              { x: x2, y: y2 },
-              { x: x3, y: y3 },
-              { x: x4, y: y4 },
-            ],
-            true,
-          );
-        }
-
-        const seamColor = blendColor(0xb7ecff, tintColor, 0.4);
-        const seamAlpha = clamp(
-          0.01 + lampFactor * 0.18 + seamPulse * 0.03,
-          0.01,
-          0.22,
-        );
-        this.lightGraphics.lineStyle(1, seamColor, seamAlpha);
-        this.lightGraphics.beginPath();
-        this.lightGraphics.moveTo(x1, y1);
-        this.lightGraphics.lineTo(x4, y4);
-        this.lightGraphics.strokePath();
-
-        if ((i / quality.segmentStep + depth) % 2 === 0) {
-          this.lightGraphics.lineStyle(
-            1,
-            blendColor(0xfff0ff, tintColor, 0.28),
-            seamAlpha * 0.7,
-          );
-          this.lightGraphics.beginPath();
-          this.lightGraphics.moveTo(topLx, topLy);
-          this.lightGraphics.lineTo(topRx, topRy);
-          this.lightGraphics.strokePath();
-        }
-
-        const runnerDepth = clamp(0.12 + treadOffset * 0.76, 0.12, 0.88);
-        const runnerBand = clamp(0.08 + boostRatio * 0.04, 0.08, 0.16);
-        const runnerStart = clamp(runnerDepth - runnerBand, 0.06, 0.9);
-        const runnerEnd = clamp(runnerDepth + runnerBand, 0.1, 0.94);
-        const runnerAlpha = clamp(
-          0.01 + treadPulse * 0.04 + lampFactor * 0.14 + boostRatio * 0.06,
-          0.01,
-          0.24,
-        );
-        this.lightGraphics.lineStyle(
-          qualityName === "high" ? 2 : 1,
-          blendColor(0x6ef1ff, tintColor, 0.36 + treadPulse * 0.14),
-          runnerAlpha,
-        );
-        this.lightGraphics.beginPath();
-        this.lightGraphics.moveTo(
-          lerp(topLx, bottomLx, runnerStart),
-          lerp(topLy, bottomLy, runnerStart),
-        );
-        this.lightGraphics.lineTo(
-          lerp(topRx, bottomRx, runnerStart),
-          lerp(topRy, bottomRy, runnerStart),
-        );
-        this.lightGraphics.strokePath();
-
-        this.lightGraphics.lineStyle(
-          1,
-          blendColor(0xffffff, tintColor, 0.24 + lampFactor * 0.2),
-          runnerAlpha * 0.7,
-        );
-        this.lightGraphics.beginPath();
-        this.lightGraphics.moveTo(
-          lerp(topLx, bottomLx, runnerEnd),
-          lerp(topLy, bottomLy, runnerEnd),
-        );
-        this.lightGraphics.lineTo(
-          lerp(topRx, bottomRx, runnerEnd),
-          lerp(topRy, bottomRy, runnerEnd),
-        );
-        this.lightGraphics.strokePath();
-
         if (lampFactor > 0.015 && edgeHighlight > 0.15) {
           const edgeGlowAlpha = clamp(
             lampFactor * edgeHighlight * 0.28 * (depthRatio + 0.2),
@@ -962,91 +808,11 @@ class TunnelRenderer {
     const snapshot = this.snapshot;
     const viewport = snapshot?.viewport;
     const tube = snapshot?.tube;
-    const player = snapshot?.player;
-    const fx = snapshot?.fx;
-
     this.fxGraphics.clear();
     if (!viewport || !tube) {
       this.debugText?.setText("Awaiting snapshot");
       return;
     }
-
-    const width = viewport.width || this.scene.scale.width;
-    const height = viewport.height || this.scene.scale.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const effectiveCenterX = centerX + (tube.centerOffsetX || 0);
-    const effectiveCenterY = centerY + (tube.centerOffsetY || 0);
-    const qualityName = tube.quality || "high";
-    const quality = QUALITY_PRESETS[qualityName] || QUALITY_PRESETS.high;
-    const forwardRatio = clamp(
-      (tube.speed - CONFIG.SPEED_START) /
-        Math.max(0.0001, BOOST_THRESHOLD - CONFIG.SPEED_START),
-      0,
-      1.3,
-    );
-    const lineCount = Math.round(
-      quality.lineCount + forwardRatio * quality.lineCount * 0.9,
-    );
-    const tintColor = player?.shield
-      ? 0x76efff
-      : player?.magnetActive
-        ? 0x78ffbd
-        : (fx?.x2Timer || 0) > 0
-          ? 0xff89ea
-          : 0xfff0cc;
-
-    if (forwardRatio > 0.04) {
-      for (let i = 0; i < lineCount; i += 1) {
-        const angle =
-          (Math.PI * 2 * i) / lineCount +
-          tube.rotation * 0.42 +
-          tube.scroll * 0.009;
-        const startRadius = CONFIG.TUBE_RADIUS * (0.14 + (i % 4) * 0.055);
-        const length =
-          64 +
-          forwardRatio * (qualityName === "high" ? 186 : 116) +
-          this.boostPulse * 32;
-        const headLead = (tube.scroll * 0.014 + i * 3.7) % length;
-        const endRadius = startRadius + headLead;
-        const tailRadius = Math.max(
-          startRadius,
-          endRadius - length * (0.28 + forwardRatio * 0.22),
-        );
-        const alpha = 0.08 + forwardRatio * 0.22;
-
-        this.fxGraphics.lineStyle(
-          1 + forwardRatio * (qualityName === "high" ? 2.4 : 1.6),
-          tintColor,
-          alpha,
-        );
-        this.fxGraphics.beginPath();
-        this.fxGraphics.moveTo(
-          effectiveCenterX + Math.cos(angle) * tailRadius,
-          effectiveCenterY +
-            Math.sin(angle) * tailRadius * CONFIG.PLAYER_OFFSET,
-        );
-        this.fxGraphics.lineTo(
-          effectiveCenterX + Math.cos(angle) * endRadius,
-          effectiveCenterY + Math.sin(angle) * endRadius * CONFIG.PLAYER_OFFSET,
-        );
-        this.fxGraphics.strokePath();
-      }
-    }
-
-    this.fxGraphics.lineStyle(
-      qualityName === "low" ? 1 : 2,
-      blendColor(0xff7bf1, tintColor, 0.45),
-      0.78,
-    );
-    this.fxGraphics.strokeCircle(effectiveCenterX, effectiveCenterY, 5);
-    this.fxGraphics.lineStyle(1, blendColor(0x7dd3fc, tintColor, 0.28), 0.45);
-    this.fxGraphics.strokeEllipse(
-      centerX,
-      centerY,
-      CONFIG.TUBE_RADIUS * 2,
-      CONFIG.TUBE_RADIUS * 2 * CONFIG.PLAYER_OFFSET,
-    );
 
     const lampNow = getLampTravelMetrics(snapshot?.runtime?.distance || 0).intensity;
     this.debugText?.setText([

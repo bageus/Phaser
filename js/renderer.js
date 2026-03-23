@@ -495,36 +495,8 @@ function drawTubeDepth() {
 }
 
 function drawTubeCenter() {
-  const cx = canvasW / 2;
-  const cy = canvasH / 2;
-  if (!isFinite(cx) || !isFinite(cy)) return;
-
-  const outerR = CONFIG.TUBE_RADIUS * 0.18;
-
-  const grad1 = ctx.createRadialGradient(cx, cy, CONFIG.TUBE_RADIUS * 0.08, cx, cy, outerR);
-  grad1.addColorStop(0, "rgba(20,20,40,0.9)");
-  grad1.addColorStop(0.5, "rgba(40,20,50,0.7)");
-  grad1.addColorStop(1, "rgba(30,10,30,0.4)");
-  ctx.fillStyle = grad1;
-  ctx.beginPath();
-  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.fill();
-
-  const grad2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, CONFIG.TUBE_RADIUS * 0.08);
-  grad2.addColorStop(0, "rgba(10,5,15,1)");
-  grad2.addColorStop(1, "rgba(20,10,25,0.8)");
-  ctx.fillStyle = grad2;
-  ctx.beginPath();
-  ctx.arc(cx, cy, CONFIG.TUBE_RADIUS * 0.08, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (gameState.renderQuality !== "low") {
-    ctx.strokeStyle = "rgba(100,60,80,0.5)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, CONFIG.TUBE_RADIUS * 0.15, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  // Temporary debug simplification: hide the center core so the
+  // fallback canvas tube can be inspected without the central disk.
 }
 
 function drawPlayer() {

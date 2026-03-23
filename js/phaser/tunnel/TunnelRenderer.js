@@ -884,37 +884,8 @@ class TunnelRenderer {
     );
     this.drawLampGlow(mouthCenterX, mouthCenterY, tube, tintColor, qualityName);
 
-    const centerGlowRadius =
-      CONFIG.TUBE_RADIUS *
-      (0.12 + clamp(boostRatio * 0.05 + this.boostPulse * 0.04, 0, 0.1));
-    this.lightGraphics.fillStyle(
-      player?.shield ? 0x7ef5ff : 0x09070f,
-      player?.shield ? 0.78 : 0.94,
-    );
-    this.lightGraphics.fillCircle(mouthCenterX, mouthCenterY, centerGlowRadius);
-    this.lightGraphics.lineStyle(
-      qualityName === "low" ? 1 : 2,
-      blendColor(0x6b4a7d, tintColor, 0.5),
-      qualityName === "low" ? 0.34 : 0.52,
-    );
-    this.lightGraphics.strokeCircle(
-      mouthCenterX,
-      mouthCenterY,
-      CONFIG.TUBE_RADIUS * 0.16,
-    );
-
-    const haloRadius = CONFIG.TUBE_RADIUS * (1.01 + this.boostPulse * 0.04);
-    this.flashGraphics.lineStyle(
-      qualityName === "low" ? 2 : 4,
-      tintColor,
-      quality.haloAlpha + this.boostPulse * quality.pulseAlpha,
-    );
-    this.flashGraphics.strokeEllipse(
-      mouthCenterX,
-      mouthCenterY,
-      haloRadius * 2,
-      haloRadius * 2 * CONFIG.PLAYER_OFFSET,
-    );
+    // Temporary debug simplification: hide the central core disk and
+    // the associated halo ring so the tube mouth can be evaluated on its own.
 
     if (this.flashLevel > 0.03) {
       this.flashGraphics.fillStyle(

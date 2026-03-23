@@ -103,6 +103,51 @@ function getLampProximity(distance) {
   return clamp(1 - nearest / LIGHT_REACH_METERS, 0, 1);
 }
 
+function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
+  graphics.beginPath();
+  graphics.moveTo(x1, y1);
+  graphics.lineTo(x2, y2);
+  graphics.lineTo(x3, y3);
+  graphics.lineTo(x4, y4);
+  graphics.closePath();
+}
+
+function drawQuadTexture(graphics, points, rows, columns, color, alpha, skew = 0.5) {
+  const safeRows = Math.max(1, rows);
+  const safeColumns = Math.max(1, columns);
+  graphics.lineStyle(1, color, alpha);
+
+  for (let row = 1; row <= safeRows; row += 1) {
+    const t = row / (safeRows + 1);
+    graphics.beginPath();
+    graphics.moveTo(
+      lerp(points.x1, points.x4, t),
+      lerp(points.y1, points.y4, t),
+    );
+    graphics.lineTo(
+      lerp(points.x2, points.x3, t),
+      lerp(points.y2, points.y3, t),
+    );
+    graphics.strokePath();
+  }
+
+  for (let column = 1; column <= safeColumns; column += 1) {
+    const t = column / (safeColumns + 1);
+    const skewedStart = clamp(t - (0.5 - skew) * 0.22, 0.06, 0.94);
+    const skewedEnd = clamp(t + (skew - 0.5) * 0.22, 0.06, 0.94);
+    graphics.beginPath();
+    graphics.moveTo(
+      lerp(points.x1, points.x2, skewedStart),
+      lerp(points.y1, points.y2, skewedStart),
+    );
+    graphics.lineTo(
+      lerp(points.x4, points.x3, skewedEnd),
+      lerp(points.y4, points.y3, skewedEnd),
+    );
+    graphics.strokePath();
+  }
+}
+
 function boostPulseFromSpeed(speed) {
   return clamp(
     (speed - BOOST_THRESHOLD) /
@@ -324,13 +369,19 @@ class TunnelRenderer {
       const panelAlpha = i % 4 === 0 ? ringGlow : ringGlow * 0.46;
 
       this.baseGraphics.fillStyle(blendColor(0x16101e, panelColor, 0.18), 0.92);
-      this.baseGraphics.beginPath();
-      this.baseGraphics.moveTo(p1x, p1y);
-      this.baseGraphics.lineTo(p2x, p2y);
-      this.baseGraphics.lineTo(p3x, p3y);
-      this.baseGraphics.lineTo(p4x, p4y);
-      this.baseGraphics.closePath();
+      drawQuadPath(this.baseGraphics, p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y);
       this.baseGraphics.fillPath();
+
+      const ringTextureColor = blendColor(textureStroke, 0xffffff, 0.18);
+      drawQuadTexture(
+        this.lightGraphics,
+        { x1: p1x, y1: p1y, x2: p2x, y2: p2y, x3: p3x, y3: p3y, x4: p4x, y4: p4y },
+        textureRows,
+        qualityName === "low" ? 2 : 3,
+        ringTextureColor,
+        0.08 + panelAlpha * 0.18,
+        (i % 2 === 0 ? 0.68 : 0.32),
+      );
 
       this.lightGraphics.lineStyle(
         qualityName === "high" ? 5 : 3,
@@ -641,12 +692,7 @@ class TunnelRenderer {
           fillColor = blendColor(fillColor, 0xff78f0, 0.18);
 
         this.baseGraphics.fillStyle(fillColor, 1);
-        this.baseGraphics.beginPath();
-        this.baseGraphics.moveTo(x1, y1);
-        this.baseGraphics.lineTo(x2, y2);
-        this.baseGraphics.lineTo(x3, y3);
-        this.baseGraphics.lineTo(x4, y4);
-        this.baseGraphics.closePath();
+        drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
         this.baseGraphics.fillPath();
 
         const topInset = clamp(0.12 + beltMotion * 0.18, 0.12, 0.34);
@@ -666,13 +712,38 @@ class TunnelRenderer {
         );
 
         this.baseGraphics.fillStyle(panelCoreColor, 0.92);
-        this.baseGraphics.beginPath();
-        this.baseGraphics.moveTo(topLx, topLy);
-        this.baseGraphics.lineTo(topRx, topRy);
-        this.baseGraphics.lineTo(bottomRx, bottomRy);
-        this.baseGraphics.lineTo(bottomLx, bottomLy);
-        this.baseGraphics.closePath();
+        drawQuadPath(
+          this.baseGraphics,
+          topLx,
+          topLy,
+          topRx,
+          topRy,
+          bottomRx,
+          bottomRy,
+          bottomLx,
+          bottomLy,
+        );
         this.baseGraphics.fillPath();
+
+        const tileTextureColor = blendColor(0xa7efff, tintColor, 0.34 + lampFactor * 0.18);
+        drawQuadTexture(
+          this.lightGraphics,
+          {
+            x1: topLx,
+            y1: topLy,
+            x2: topRx,
+            y2: topRy,
+            x3: bottomRx,
+            y3: bottomRy,
+            x4: bottomLx,
+            y4: bottomLy,
+          },
+          qualityName === "low" ? 1 : 2,
+          qualityName === "high" ? 3 : 2,
+          tileTextureColor,
+          clamp(0.05 + lampFactor * 0.08 + beltMotion * 0.06, 0.04, 0.2),
+          ((depth + i) % 3) / 2,
+        );
 
         if (qualityName !== "low") {
           this.baseGraphics.lineStyle(
@@ -759,12 +830,7 @@ class TunnelRenderer {
 
         if (shadowAlpha > 0.02) {
           this.baseGraphics.fillStyle(0x000000, shadowAlpha);
-          this.baseGraphics.beginPath();
-          this.baseGraphics.moveTo(x1, y1);
-          this.baseGraphics.lineTo(x2, y2);
-          this.baseGraphics.lineTo(x3, y3);
-          this.baseGraphics.lineTo(x4, y4);
-          this.baseGraphics.closePath();
+          drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
           this.baseGraphics.fillPath();
         }
 

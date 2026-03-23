@@ -330,7 +330,7 @@ class TunnelRenderer {
     this.baseGraphics.lineStyle(
       qualityName === "low" ? 2 : 4,
       frameColor,
-      0.92,
+      0.82,
     );
     this.baseGraphics.strokeEllipse(
       centerX,
@@ -341,7 +341,7 @@ class TunnelRenderer {
     this.baseGraphics.lineStyle(
       qualityName === "low" ? 1 : 3,
       blendColor(frameColor, 0xb9c6ff, 0.32),
-      0.72,
+      0.42,
     );
     this.baseGraphics.strokeEllipse(
       centerX,
@@ -351,8 +351,8 @@ class TunnelRenderer {
     );
     this.baseGraphics.lineStyle(
       qualityName === "low" ? 1 : 2,
-      blendColor(0x26192f, 0xffffff, 0.24),
-      0.6,
+      blendColor(0x140d19, 0xffffff, 0.14),
+      0.28,
     );
     this.baseGraphics.strokeEllipse(
       centerX,
@@ -380,7 +380,7 @@ class TunnelRenderer {
           : blendColor(0x5c68ff, tintColor, 0.24);
       const panelAlpha = i % 4 === 0 ? ringGlow : ringGlow * 0.46;
 
-      this.baseGraphics.fillStyle(blendColor(0x16101e, panelColor, 0.18), 0.92);
+      this.baseGraphics.fillStyle(blendColor(0x08050d, panelColor, 0.08), 0.94);
       drawQuadPath(this.baseGraphics, p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y);
       this.baseGraphics.fillPath();
 
@@ -391,7 +391,7 @@ class TunnelRenderer {
         textureRows,
         qualityName === "low" ? 2 : 3,
         ringTextureColor,
-        0.08 + panelAlpha * 0.18,
+        0.03 + panelAlpha * 0.22,
         (i % 2 === 0 ? 0.68 : 0.32),
       );
 
@@ -436,7 +436,7 @@ class TunnelRenderer {
     this.lightGraphics.lineStyle(
       qualityName === "low" ? 2 : 6,
       rimColor,
-      0.24 + this.boostPulse * 0.2,
+      0.12 + this.boostPulse * 0.18,
     );
     this.lightGraphics.strokeEllipse(
       centerX,
@@ -447,7 +447,7 @@ class TunnelRenderer {
     this.lightGraphics.lineStyle(
       qualityName === "low" ? 1 : 3,
       blendColor(rimColor, 0xffffff, 0.38),
-      0.16 + this.boostPulse * 0.12,
+      0.06 + this.boostPulse * 0.1,
     );
     this.lightGraphics.strokeEllipse(
       centerX,
@@ -613,9 +613,9 @@ class TunnelRenderer {
       const lampTravel = getLampTravelMetrics(depthMeters);
       const lampFactor = lampTravel.intensity;
       const localBrightness = clamp(
-        0.22 + lampFactor * 0.5 + boostRatio * 0.14,
-        0.16,
-        0.9,
+        0.04 + lampFactor * 0.72 + boostRatio * 0.08,
+        0.03,
+        0.82,
       );
       const fogAlpha = clamp(
         depthFogStrength * depthRatio * (0.8 + lampFactor * 0.55),
@@ -696,14 +696,14 @@ class TunnelRenderer {
         let fillColor = getSegmentColor(segmentMid, i, colorBoost);
         fillColor = blendColor(
           fillColor,
-          0x090610,
-          0.22 + (1 - localBrightness) * 0.22,
+          0x020104,
+          0.56 + (1 - localBrightness) * 0.28,
         );
-        fillColor = blendColor(fillColor, 0xa32048, laneBand * 0.16);
+        fillColor = blendColor(fillColor, 0x220811, laneBand * 0.08);
         fillColor = blendColor(
           fillColor,
           0x78dbff,
-          lampFactor * 0.2 + edgeHighlight * 0.08,
+          lampFactor * 0.34 + edgeHighlight * lampFactor * 0.12,
         );
         if (player?.shield) fillColor = blendColor(fillColor, 0x86f4ff, 0.22);
         if (player?.magnetActive)
@@ -728,10 +728,10 @@ class TunnelRenderer {
         const panelCoreColor = blendColor(
           fillColor,
           0xffffff,
-          0.06 + lampFactor * 0.1 + beltMotion * 0.06,
+          0.01 + lampFactor * 0.12 + beltMotion * 0.02,
         );
 
-        this.baseGraphics.fillStyle(panelCoreColor, 0.92);
+        this.baseGraphics.fillStyle(panelCoreColor, 0.86);
         drawQuadPath(
           this.baseGraphics,
           topLx,
@@ -761,7 +761,7 @@ class TunnelRenderer {
           qualityName === "low" ? 1 : 2,
           qualityName === "high" ? 3 : 2,
           tileTextureColor,
-          clamp(0.05 + lampFactor * 0.08 + beltMotion * 0.06, 0.04, 0.2),
+          clamp(0.015 + lampFactor * 0.14 + beltMotion * 0.02, 0.01, 0.18),
           ((depth + i) % 3) / 2,
           treadOffset,
         );
@@ -771,9 +771,9 @@ class TunnelRenderer {
             1,
             blendColor(0xfdd2f1, tintColor, 0.16),
             clamp(
-              0.08 + lampFactor * 0.14 + seamPulse * 0.06,
-              0.06,
-              quality.rimAlpha,
+              0.015 + lampFactor * 0.18 + seamPulse * 0.02,
+              0.01,
+              quality.rimAlpha * 0.72,
             ),
           );
           this.baseGraphics.strokePoints(
@@ -789,9 +789,9 @@ class TunnelRenderer {
 
         const seamColor = blendColor(0xb7ecff, tintColor, 0.4);
         const seamAlpha = clamp(
-          0.04 + lampFactor * 0.14 + seamPulse * 0.1,
-          0.04,
-          0.26,
+          0.01 + lampFactor * 0.18 + seamPulse * 0.03,
+          0.01,
+          0.22,
         );
         this.lightGraphics.lineStyle(1, seamColor, seamAlpha);
         this.lightGraphics.beginPath();
@@ -816,9 +816,9 @@ class TunnelRenderer {
         const runnerStart = clamp(runnerDepth - runnerBand, 0.06, 0.9);
         const runnerEnd = clamp(runnerDepth + runnerBand, 0.1, 0.94);
         const runnerAlpha = clamp(
-          0.04 + treadPulse * 0.11 + boostRatio * 0.1,
-          0.04,
-          0.28,
+          0.01 + treadPulse * 0.04 + lampFactor * 0.14 + boostRatio * 0.06,
+          0.01,
+          0.24,
         );
         this.lightGraphics.lineStyle(
           qualityName === "high" ? 2 : 1,
@@ -878,7 +878,7 @@ class TunnelRenderer {
         if (qualityName === "high") {
           this.fogGraphics.fillStyle(
             blendColor(0x0f0717, tintColor, 0.14 + lampFactor * 0.08),
-            fogAlpha * 0.42,
+            fogAlpha * 0.52,
           );
           this.fogGraphics.beginPath();
           this.fogGraphics.moveTo(x1, y1);

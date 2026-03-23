@@ -13,13 +13,25 @@ npm run dev
 
 ### Visual-only mode (backend disabled)
 
-To test only the frontend visuals without backend auth / leaderboard / store requests, open the app with `?backend=off`, for example:
+Phaser renderer now auto-disables backend calls by default, so frontend-only testing works with:
+
+```
+http://localhost:5173/?renderer=phaser
+```
+
+If you want to be explicit, `?backend=off` still works:
 
 ```
 http://localhost:5173/?renderer=phaser&backend=off
 ```
 
-This forces an offline unauth config, hides leaderboard persistence, disables wallet auth, and keeps the run loop available for visual checks.
+If you need to re-enable live API calls while using Phaser, override it with:
+
+```
+http://localhost:5173/?renderer=phaser&backend=live
+```
+
+In offline mode the app forces an unauth runtime config, hides leaderboard persistence, disables wallet auth, and keeps the run loop available for visual checks. If the unauth config endpoint is unavailable, the frontend now falls back to a bundled offline config instead of blocking Phaser testing.
 
 ## Build
 

@@ -3,12 +3,12 @@ const BACKEND_URL = "https://ursassbackend-production.up.railway.app";
 const urlParams = new URLSearchParams(window.location.search);
 const requestedRenderer = (urlParams.get('renderer') || localStorage.getItem('rendererBackend') || 'canvas').trim().toLowerCase();
 const explicitBackendMode = urlParams.get('backend') || localStorage.getItem('backendMode');
-const backendMode = (explicitBackendMode || (requestedRenderer === 'phaser' ? 'off' : 'live')).trim().toLowerCase();
+const backendMode = (explicitBackendMode || 'live').trim().toLowerCase();
 const BACKEND_DISABLED = backendMode === 'off' || backendMode === 'offline' || backendMode === 'mock';
 console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 console.log(`🧪 Backend mode: ${BACKEND_DISABLED ? 'offline' : 'live'}`);
-if (!explicitBackendMode && requestedRenderer === 'phaser' && BACKEND_DISABLED) {
-  console.log('🧪 Phaser renderer detected — backend auto-disabled for frontend-only testing');
+if (!explicitBackendMode && requestedRenderer === 'phaser') {
+  console.log('🧪 Phaser renderer detected — backend stays live by default');
 }
 
 // WalletConnect v2 Project ID — get yours at https://cloud.walletconnect.com

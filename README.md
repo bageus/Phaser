@@ -11,21 +11,21 @@ npm install
 npm run dev
 ```
 
-### Visual-only mode (backend disabled)
+### Backend mode with Phaser
 
-Phaser renderer now auto-disables backend calls by default, so frontend-only testing works with:
+Phaser renderer now keeps backend calls enabled by default, so leaderboard, wallet connection, and user data loading continue to work with:
 
 ```
 http://localhost:5173/?renderer=phaser
 ```
 
-If you want to be explicit, `?backend=off` still works:
+If you want a visual-only/offline run, explicitly disable backend calls with:
 
 ```
 http://localhost:5173/?renderer=phaser&backend=off
 ```
 
-If you need to re-enable live API calls while using Phaser, override it with:
+You can also force live API calls explicitly with:
 
 ```
 http://localhost:5173/?renderer=phaser&backend=live

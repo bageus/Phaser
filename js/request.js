@@ -1,5 +1,7 @@
 /* ===== NETWORK REQUEST HELPER ===== */
 
+import { BACKEND_DISABLED, BACKEND_URL } from './config.js';
+
 const REQUEST_DEFAULT_TIMEOUT_MS = 8000;
 const REQUEST_DEFAULT_RETRIES = 1;
 const REQUEST_DEFAULT_RETRY_DELAY_MS = 400;
@@ -35,6 +37,10 @@ function shouldRetryRequest(error, responseStatus, attempt, maxAttempts) {
   return REQUEST_RETRY_STATUSES.has(responseStatus);
 }
 
+function isBackendRequest(url) {
+  return typeof url === 'string' && url.startsWith(BACKEND_URL);
+}
+
 async function request(url, options = {}) {
   const {
     timeoutMs = REQUEST_DEFAULT_TIMEOUT_MS,
@@ -45,6 +51,16 @@ async function request(url, options = {}) {
   } = options;
 
   const method = (fetchOptions.method || 'GET').toUpperCase();
+
+  if (BACKEND_DISABLED && isBackendRequest(url)) {
+    throw new RequestError('Backend request blocked because backend mode is offline', {
+      code: 'BACKEND_DISABLED',
+      url,
+      method,
+      attempt: 1
+    });
+  }
+
   const maxAttempts = Math.max(1, retries + 1);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -106,7 +122,5 @@ async function request(url, options = {}) {
   });
 }
 
-
-Object.assign(window, { RequestError, request });
 
 export { RequestError, request };

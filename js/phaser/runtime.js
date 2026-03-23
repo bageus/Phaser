@@ -1,4 +1,4 @@
-import { MainScene } from './scenes/MainScene.js';
+import { MAIN_SCENE_KEY, createMainSceneClass } from './scenes/MainScene.js';
 
 const PHASER_CDN_URL = 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.esm.js';
 
@@ -19,6 +19,7 @@ async function loadPhaserModule() {
 
 async function createPhaserRuntime({ parent, snapshot, width, height, resolution }) {
   const Phaser = await loadPhaserModule();
+  const MainScene = createMainSceneClass(Phaser);
 
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -41,13 +42,19 @@ async function createPhaserRuntime({ parent, snapshot, width, height, resolution
       zoom: 1
     },
     resolution,
-    scene: [MainScene]
+    scene: [MainScene],
+    callbacks: {
+      postBoot(game) {
+        const scene = game.scene.getScene(MAIN_SCENE_KEY);
+        scene?.applySnapshot(snapshot);
+      }
+    }
   });
 
   return {
     game,
     getScene() {
-      return game.scene.getScene('MainScene');
+      return game.scene.getScene(MAIN_SCENE_KEY);
     },
     applySnapshot(nextSnapshot) {
       const scene = this.getScene();
@@ -60,7 +67,7 @@ async function createPhaserRuntime({ parent, snapshot, width, height, resolution
         game.renderer.resolution = nextResolution;
       }
       this.applySnapshot({
-        ...snapshot,
+        ...this.getScene()?.controller?.snapshot,
         viewport: { width: nextWidth, height: nextHeight }
       });
     },

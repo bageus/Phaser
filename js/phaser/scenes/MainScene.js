@@ -1,11 +1,14 @@
 import { TunnelRenderer } from '../tunnel/TunnelRenderer.js';
 
-class MainScene {
-  constructor() {
-    this.key = 'MainScene';
+const MAIN_SCENE_KEY = 'MainScene';
+
+class MainSceneController {
+  constructor(scene) {
+    this.scene = scene;
     this.snapshot = null;
     this.background = null;
     this.tunnelRenderer = null;
+    this.handleResize = this.handleResize.bind(this);
   }
 
   init(data) {
@@ -13,12 +16,12 @@ class MainScene {
   }
 
   create() {
-    const { width, height } = this.scale;
-    this.background = this.add.rectangle(0, 0, width, height, 0x050816).setOrigin(0, 0);
-    this.tunnelRenderer = new TunnelRenderer(this);
+    const { width, height } = this.scene.scale;
+    this.background = this.scene.add.rectangle(0, 0, width, height, 0x050816).setOrigin(0, 0);
+    this.tunnelRenderer = new TunnelRenderer(this.scene);
     this.tunnelRenderer.create();
     this.tunnelRenderer.applySnapshot(this.snapshot);
-    this.scale.on('resize', this.handleResize, this);
+    this.scene.scale.on('resize', this.handleResize);
   }
 
   handleResize(gameSize) {
@@ -32,10 +35,34 @@ class MainScene {
   }
 
   destroy() {
-    this.scale.off('resize', this.handleResize, this);
+    this.scene.scale.off('resize', this.handleResize);
     this.tunnelRenderer?.destroy();
     this.tunnelRenderer = null;
   }
 }
 
-export { MainScene };
+function createMainSceneClass(Phaser) {
+  return class MainScene extends Phaser.Scene {
+    constructor() {
+      super({ key: MAIN_SCENE_KEY });
+      this.controller = new MainSceneController(this);
+    }
+
+    init(data) {
+      this.controller.init(data);
+    }
+
+    create() {
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.controller.destroy();
+      });
+      this.controller.create();
+    }
+
+    applySnapshot(snapshot) {
+      this.controller.applySnapshot(snapshot);
+    }
+  };
+}
+
+export { MAIN_SCENE_KEY, createMainSceneClass };

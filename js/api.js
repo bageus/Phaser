@@ -62,6 +62,83 @@ import { canPersistProgress, isEligibleForLeaderboardFlow, isUnauthRuntimeMode }
  * @property {number|string} telegramId
  */
 
+
+const OFFLINE_LEADERBOARD_STORAGE_KEY = 'ursassOfflineLeaderboard';
+
+function readOfflineLeaderboard() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_LEADERBOARD_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOfflineLeaderboard(entries) {
+  try {
+    localStorage.setItem(OFFLINE_LEADERBOARD_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // ignore storage write failures
+  }
+}
+
+function buildOfflinePlayerData(identifier) {
+  const normalizedId = String(identifier || '').trim().toLowerCase();
+  const entries = readOfflineLeaderboard();
+  const sorted = entries
+    .filter((entry) => entry && typeof entry === 'object')
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  const playerEntry = sorted.find((entry) => String(entry.wallet || '').trim().toLowerCase() === normalizedId);
+  const position = playerEntry ? (sorted.findIndex((entry) => entry === playerEntry) + 1) : null;
+
+  return {
+    bestScore: Number(playerEntry?.score || 0),
+    position,
+    totalGoldCoins: Number(playerEntry?.goldCoins || 0),
+    totalSilverCoins: Number(playerEntry?.silverCoins || 0)
+  };
+}
+
+function getOfflineLeaderboardResponse() {
+  const entries = readOfflineLeaderboard()
+    .filter((entry) => entry && typeof entry === 'object')
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  const userWallet = String(getLeaderboardWalletAddress() || '').trim().toLowerCase();
+  const playerPosition = userWallet
+    ? (entries.findIndex((entry) => String(entry.wallet || '').trim().toLowerCase() === userWallet) + 1 || null)
+    : null;
+
+  return {
+    leaderboard: entries.slice(0, 10),
+    playerPosition
+  };
+}
+
+function saveOfflineLeaderboardEntry(payload) {
+  const wallet = String(payload.wallet || '').trim().toLowerCase();
+  if (!wallet) return false;
+
+  const entries = readOfflineLeaderboard();
+  const existingIndex = entries.findIndex((entry) => String(entry.wallet || '').trim().toLowerCase() === wallet);
+  const existing = existingIndex >= 0 ? entries[existingIndex] : null;
+  const nextEntry = {
+    wallet,
+    displayName: wallet.startsWith('0x') ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet,
+    score: Math.max(Number(existing?.score || 0), Number(payload.score || 0)),
+    distance: Math.max(Number(existing?.distance || 0), Number(payload.distance || 0)),
+    goldCoins: Math.max(Number(existing?.goldCoins || 0), Number(payload.goldCoins || 0)),
+    silverCoins: Math.max(Number(existing?.silverCoins || 0), Number(payload.silverCoins || 0)),
+    updatedAt: Date.now()
+  };
+
+  if (existingIndex >= 0) entries.splice(existingIndex, 1, nextEntry);
+  else entries.push(nextEntry);
+
+  writeOfflineLeaderboard(entries);
+  return true;
+}
+
 /* ===== AUTH HELPERS ===== */
 
 function isAuthenticated() {
@@ -97,7 +174,24 @@ function resetLeaderboardUI() {
 
 async function updateWalletUI() {
   if (BACKEND_DISABLED) {
-    DOM.walletInfo.classList.remove("visible");
+    const primaryId = getPrimaryAuthIdentifier();
+    if (!primaryId) {
+      DOM.walletInfo.classList.remove('visible');
+      resetWalletPlayerUI();
+      return;
+    }
+
+    const playerData = buildOfflinePlayerData(primaryId);
+    const rankEl = document.getElementById('walletRank');
+    const bestEl = document.getElementById('walletBest');
+    const goldEl = document.getElementById('walletGold');
+    const silverEl = document.getElementById('walletSilver');
+
+    if (rankEl) rankEl.textContent = playerData.bestScore > 0 ? `#${playerData.position || '—'}` : '—';
+    if (bestEl) bestEl.textContent = String(playerData.bestScore || 0);
+    if (goldEl) goldEl.textContent = String(playerData.totalGoldCoins || 0);
+    if (silverEl) silverEl.textContent = String(playerData.totalSilverCoins || 0);
+    DOM.walletInfo.classList.add('visible');
     return;
   }
 
@@ -163,9 +257,10 @@ async function signMessage(message) {
 
 async function loadAndDisplayLeaderboard() {
   if (BACKEND_DISABLED) {
-    displayLeaderboard([], null);
-    updateGameOverLeaderboardNotice();
-    console.log('🧪 Backend disabled — leaderboard hidden for visual testing');
+    const data = getOfflineLeaderboardResponse();
+    displayLeaderboard(data.leaderboard, data.playerPosition);
+    updateGameOverLeaderboardNotice(data.leaderboard.length ? 'Offline leaderboard' : 'Offline leaderboard is empty');
+    console.log('🧪 Backend disabled — offline leaderboard loaded');
     return;
   }
 
@@ -189,7 +284,20 @@ async function loadAndDisplayLeaderboard() {
 
 async function saveResultToLeaderboard() {
   if (BACKEND_DISABLED) {
-    console.log('🧪 Backend disabled — skip leaderboard save');
+    const wallet = String(getPrimaryAuthIdentifier() || getLeaderboardWalletAddress() || 'offline-player').trim().toLowerCase();
+    const saved = saveOfflineLeaderboardEntry({
+      wallet,
+      score: Math.max(0, Math.floor(gameState.score || 0)),
+      distance: Math.max(0, Math.floor(gameState.distance || 0)),
+      goldCoins: Math.max(0, Math.floor(gameState.goldCoins || 0)),
+      silverCoins: Math.max(0, Math.floor(gameState.silverCoins || 0))
+    });
+    if (saved) {
+      console.log('🧪 Backend disabled — result saved locally');
+      showBonusText('✅ Saved locally');
+      await loadAndDisplayLeaderboard();
+      await updateWalletUI();
+    }
     return;
   }
 

@@ -19,6 +19,76 @@ let linkedWallet = null;
 let isWalletAuthInProgress = false;
 let isWalletLinkInProgress = false;
 
+
+const OFFLINE_WALLET_STORAGE_KEY = 'ursassOfflineWalletAddress';
+
+function getStoredOfflineWalletAddress() {
+  try {
+    return localStorage.getItem(OFFLINE_WALLET_STORAGE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredOfflineWalletAddress(address) {
+  try {
+    if (address) localStorage.setItem(OFFLINE_WALLET_STORAGE_KEY, address);
+    else localStorage.removeItem(OFFLINE_WALLET_STORAGE_KEY);
+  } catch {
+    // ignore storage failures in restricted environments
+  }
+}
+
+function generateMockWalletAddress() {
+  const bytes = new Uint8Array(20);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function resolveOfflineWalletAddress(address = null) {
+  const normalized = String(address || getStoredOfflineWalletAddress() || generateMockWalletAddress()).trim().toLowerCase();
+  setStoredOfflineWalletAddress(normalized);
+  return normalized;
+}
+
+async function connectOfflineWalletSession() {
+  let walletAddress = null;
+
+  if (window.ethereum) {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (Array.isArray(accounts) && accounts.length > 0) {
+      walletAddress = accounts[0];
+      web3 = new ethers.providers.Web3Provider(window.ethereum);
+    }
+  } else {
+    const connected = await WC.connect();
+    if (connected && Array.isArray(WC.accounts) && WC.accounts.length > 0) {
+      walletAddress = WC.accounts[0];
+    }
+  }
+
+  const resolvedWallet = resolveOfflineWalletAddress(walletAddress);
+  clearRuntimeConfig();
+  authMode = 'wallet';
+  primaryId = resolvedWallet;
+  userWallet = resolvedWallet;
+  linkedTelegramId = null;
+  linkedTelegramUsername = null;
+  linkedWallet = null;
+  isWalletConnected = true;
+  console.log('🧪 Offline wallet session started:', resolvedWallet);
+  updateAuthUI();
+  await runPostAuthSync();
+
+  if (!walletAddress) {
+    alert('🧪 Backend disabled: started local wallet session with a mock wallet address.');
+  }
+}
+
 const authCallbacks = {
   onWalletUiUpdate: async () => {},
   onLoadPlayerUpgrades: async () => {},
@@ -118,7 +188,7 @@ function getTelegramUserData() {
 
 async function connectWalletAuth() {
   if (BACKEND_DISABLED) {
-    alert('🧪 Backend disabled. Open the game with ?backend=live to test wallet auth.');
+    await connectOfflineWalletSession();
     return;
   }
 
@@ -186,6 +256,7 @@ async function connectWalletAuth() {
 }
 
 function disconnectAuth() {
+  setStoredOfflineWalletAddress(null);
   WC.disconnect();
   authMode = null;
   primaryId = null;
@@ -348,6 +419,27 @@ function updateAuthUI() {
 }
 
 async function initAuth() {
+  if (BACKEND_DISABLED) {
+    if (isTelegramMiniApp()) {
+      telegramUser = getTelegramUserData();
+      clearRuntimeConfig();
+      authMode = 'telegram';
+      primaryId = telegramUser?.id || 'telegram-offline';
+      linkedWallet = getStoredOfflineWalletAddress();
+      isWalletConnected = true;
+      userWallet = linkedWallet || primaryId;
+      console.log('🧪 Offline Telegram auth:', primaryId);
+      updateAuthUI();
+      await runPostAuthSync();
+      return;
+    }
+
+    authMode = null;
+    console.log('🧪 Offline browser mode — wallet auth available without backend');
+    updateAuthUI();
+    return;
+  }
+
   if (isTelegramMiniApp()) {
     telegramUser = getTelegramUserData();
     console.log("📱 Telegram mode:", telegramUser);

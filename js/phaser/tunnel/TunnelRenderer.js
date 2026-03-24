@@ -1,6 +1,17 @@
 import { CONFIG } from '../../config.js';
 
 const INNER_RADIUS_RATIO = 0.15;
+const TILE_VARIANTS = Object.freeze({
+  none: 'none',
+  topRaised: 'topRaised',
+  bottomRaised: 'bottomRaised',
+  cornerRaised: 'cornerRaised',
+  middleRaised: 'middleRaised',
+  chipped: 'chipped',
+  rough: 'rough',
+  cracked: 'cracked',
+  smooth: 'smooth',
+});
 
 const QUALITY_PRESETS = Object.freeze({
   low: {
@@ -47,6 +58,24 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.lineTo(x3, y3);
   graphics.lineTo(x4, y4);
   graphics.closePath();
+}
+
+function pseudoRandom(seedA, seedB) {
+  const value = Math.sin(seedA * 127.1 + seedB * 311.7) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+function getTileVariant(depth, segment) {
+  const roll = pseudoRandom(depth + 1, segment + 1);
+  if (roll < 0.05) return TILE_VARIANTS.topRaised;
+  if (roll < 0.1) return TILE_VARIANTS.bottomRaised;
+  if (roll < 0.14) return TILE_VARIANTS.cornerRaised;
+  if (roll < 0.18) return TILE_VARIANTS.middleRaised;
+  if (roll < 0.23) return TILE_VARIANTS.chipped;
+  if (roll < 0.28) return TILE_VARIANTS.rough;
+  if (roll < 0.32) return TILE_VARIANTS.cracked;
+  if (roll < 0.38) return TILE_VARIANTS.smooth;
+  return TILE_VARIANTS.none;
 }
 
 class TunnelRenderer {
@@ -213,15 +242,85 @@ class TunnelRenderer {
           Math.cos(boundaryA) * radius2 * CONFIG.PLAYER_OFFSET +
           (tube.centerOffsetY || 0) * bend2;
 
-        this.baseGraphics.fillStyle(wallColor, quality.segmentAlpha);
-        drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
+        const tileVariant = getTileVariant(depth, i);
+        const tileNoise = pseudoRandom(depth + 17, i + 53);
+        const protrusion = 1.2 + depthRatio * 2.2;
+
+        let tx1 = x1;
+        let ty1 = y1;
+        let tx2 = x2;
+        let ty2 = y2;
+        let tx3 = x3;
+        let ty3 = y3;
+        let tx4 = x4;
+        let ty4 = y4;
+
+        if (tileVariant === TILE_VARIANTS.topRaised) {
+          ty1 -= protrusion;
+          ty2 -= protrusion;
+        } else if (tileVariant === TILE_VARIANTS.bottomRaised) {
+          ty3 += protrusion;
+          ty4 += protrusion;
+        } else if (tileVariant === TILE_VARIANTS.cornerRaised) {
+          tx1 -= protrusion * 0.7;
+          ty1 -= protrusion * 0.7;
+        } else if (tileVariant === TILE_VARIANTS.middleRaised) {
+          const raiseX = Math.sin((boundaryA + boundaryB) * 0.5) * protrusion * 0.6;
+          const raiseY =
+            Math.cos((boundaryA + boundaryB) * 0.5) * protrusion * 0.6 * CONFIG.PLAYER_OFFSET;
+          tx1 += raiseX;
+          ty1 += raiseY;
+          tx2 += raiseX;
+          ty2 += raiseY;
+          tx3 += raiseX;
+          ty3 += raiseY;
+          tx4 += raiseX;
+          ty4 += raiseY;
+        }
+
+        let tileColor = wallColor;
+        let tileAlpha = quality.segmentAlpha;
+        if (tileVariant === TILE_VARIANTS.smooth) {
+          tileColor = blendColor(wallColor, 0xb9d8ff, 0.2);
+          tileAlpha += 0.03;
+        } else if (tileVariant === TILE_VARIANTS.rough) {
+          tileColor = blendColor(wallColor, 0x161e2e, 0.25);
+        } else if (tileVariant === TILE_VARIANTS.chipped) {
+          tileColor = blendColor(wallColor, 0xc4d4eb, 0.15);
+        } else if (tileVariant === TILE_VARIANTS.cracked) {
+          tileColor = blendColor(wallColor, 0x0f1422, 0.22);
+        }
+
+        this.baseGraphics.fillStyle(tileColor, clamp(tileAlpha, 0.2, 1));
+        drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.fillPath();
 
-        this.baseGraphics.lineStyle(1, seamColor, 0.06 + depthRatio * 0.12);
-        this.baseGraphics.beginPath();
-        this.baseGraphics.moveTo(x1, y1);
-        this.baseGraphics.lineTo(x4, y4);
+        const tileBorderColor = blendColor(seamColor, 0xdbe9ff, tileVariant === TILE_VARIANTS.smooth ? 0.22 : 0.08);
+        this.baseGraphics.lineStyle(1, tileBorderColor, 0.07 + depthRatio * 0.14);
+        drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.strokePath();
+
+        if (tileVariant === TILE_VARIANTS.cracked) {
+          const crackX1 = (tx1 + tx2) * 0.5;
+          const crackY1 = (ty1 + ty2) * 0.5;
+          const crackX2 = (tx4 + tx3) * 0.5 + (tileNoise - 0.5) * 3;
+          const crackY2 = (ty4 + ty3) * 0.5 + (tileNoise - 0.5) * 2;
+          this.baseGraphics.lineStyle(1, blendColor(0x101522, 0x8aa7ce, 0.25), 0.35 + depthRatio * 0.2);
+          this.baseGraphics.beginPath();
+          this.baseGraphics.moveTo(crackX1, crackY1);
+          this.baseGraphics.lineTo(crackX2, crackY2);
+          this.baseGraphics.strokePath();
+        } else if (tileVariant === TILE_VARIANTS.chipped) {
+          const chipX = lerp(tx2, tx3, 0.5);
+          const chipY = lerp(ty2, ty3, 0.5);
+          this.baseGraphics.fillStyle(0xd3dfef, 0.18 + depthRatio * 0.2);
+          this.baseGraphics.fillCircle(chipX, chipY, 0.8 + depthRatio * 1.6);
+        } else if (tileVariant === TILE_VARIANTS.rough) {
+          const roughX = (tx1 + tx2 + tx3 + tx4) * 0.25;
+          const roughY = (ty1 + ty2 + ty3 + ty4) * 0.25;
+          this.baseGraphics.fillStyle(0x0c111b, 0.12 + depthRatio * 0.14);
+          this.baseGraphics.fillCircle(roughX, roughY, 0.7 + depthRatio * 1.1);
+        }
       }
     }
 

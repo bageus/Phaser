@@ -12,6 +12,9 @@ const LAMP_BRIGHTNESS_MULTIPLIER = 100;
 const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
+const WAVE_BASE_ALPHA_CAP = 0.26;
+const WAVE_INNER_BAND_ALPHA_FACTOR = 0.82;
+const WAVE_OUTER_BAND_ALPHA_FACTOR = 0.46;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 2;
 const TUNNEL_TILE_FRAME_COUNT = 16;
@@ -87,6 +90,37 @@ function getQuadBand(quad, startRatio, endRatio) {
     p3: lerpPoint(quad.p2, quad.p3, clampedEnd),
     p4: lerpPoint(quad.p1, quad.p4, clampedEnd),
   };
+}
+
+function drawSoftWaveOverlay(graphics, overlay, depthMix = 0.3, alphaScale = 1) {
+  const overlayColor = blendColor(0x6ba6eb, 0xdff3ff, overlay.depthRatio * depthMix);
+  const baseAlpha = amplifiedAlpha(clamp(
+    (0.14 + overlay.depthRatio * 0.16) *
+      overlay.spawnBlend *
+      SPAWNED_RING_ALPHA_MULTIPLIER *
+      alphaScale,
+    0,
+    WAVE_BASE_ALPHA_CAP,
+  ));
+  if (baseAlpha <= 0.003) {
+    return;
+  }
+
+  const quad = {
+    p1: { x: overlay.x1, y: overlay.y1 },
+    p2: { x: overlay.x2, y: overlay.y2 },
+    p3: { x: overlay.x3, y: overlay.y3 },
+    p4: { x: overlay.x4, y: overlay.y4 },
+  };
+
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_INNER_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0.18, 0.86));
+
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0, 0.16));
+
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0.88, 1));
 }
 
 function lerpPoint(a, b, t) {
@@ -402,28 +436,7 @@ class TunnelRenderer {
     }
 
     for (const overlay of spawnedRingOverlays) {
-      const overlayAlpha = amplifiedAlpha(clamp(
-        (0.18 + overlay.depthRatio * 0.2) *
-          overlay.spawnBlend *
-          SPAWNED_RING_ALPHA_MULTIPLIER,
-        0,
-        0.34,
-      ));
-      const overlayColor = blendColor(0x78b8ff, 0xffffff, overlay.depthRatio * 0.3);
-      this.lightGraphics.fillStyle(overlayColor, overlayAlpha);
-      drawQuadPath(
-        this.lightGraphics,
-        overlay.x1,
-        overlay.y1,
-        overlay.x2,
-        overlay.y2,
-        overlay.x3,
-        overlay.y3,
-        overlay.x4,
-        overlay.y4,
-      );
-      this.lightGraphics.fillPath();
-
+      drawSoftWaveOverlay(this.lightGraphics, overlay, 0.24, 1);
     }
 
     this.drawMouthRing(centerX, centerY, tube);
@@ -522,27 +535,7 @@ class TunnelRenderer {
     }
 
     for (const overlay of spawnedRingOverlays) {
-      const overlayAlpha = amplifiedAlpha(clamp(
-        (0.2 + overlay.depthRatio * 0.24) *
-          overlay.spawnBlend *
-          (SPAWNED_RING_ALPHA_MULTIPLIER * 1.35),
-        0,
-        0.42,
-      ));
-      const overlayColor = blendColor(0x78b8ff, 0xffffff, overlay.depthRatio * 0.4);
-      this.lightGraphics.fillStyle(overlayColor, overlayAlpha);
-      drawQuadPath(
-        this.lightGraphics,
-        overlay.x1,
-        overlay.y1,
-        overlay.x2,
-        overlay.y2,
-        overlay.x3,
-        overlay.y3,
-        overlay.x4,
-        overlay.y4,
-      );
-      this.lightGraphics.fillPath();
+      drawSoftWaveOverlay(this.lightGraphics, overlay, 0.3, 1.15);
     }
     this.hideUnusedTileSprites(usedSprites);
   }

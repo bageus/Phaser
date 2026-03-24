@@ -433,9 +433,9 @@ class EntityRenderer {
       const lampBodyHeight = clamp(7 * lampScale + 1.8, 2.2, 9.5);
       const lampBodyColor = isBroken ? 0x3a4659 : 0x7e96b0;
       const supportY = projection.y - lampBodyHeight * 0.9;
-      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.16 + intensity * 0.05), 10, 62);
-      const glowY = projection.y + glowRadius * 0.28;
-      const glowAlpha = clamp((0.08 + intensity * 0.18) * depthRatio, 0, 0.42);
+      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.2 + intensity * 0.07), 14, 84);
+      const glowY = projection.y + glowRadius * 0.36;
+      const glowAlpha = clamp((0.14 + intensity * 0.26) * depthRatio, 0, 0.58);
 
       graphics.clear();
       graphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);
@@ -453,6 +453,17 @@ class EntityRenderer {
           glowY,
           glowRadius,
           glowRadius * 0.46 * CONFIG.PLAYER_OFFSET,
+        );
+        const pipeLightY = projection.y + glowRadius * 1.08;
+        const pipeLightWidth = clamp(glowRadius * 1.9, 20, 150);
+        const pipeLightHeight = clamp(glowRadius * 0.86 * CONFIG.PLAYER_OFFSET, 8, 64);
+        const pipeLightAlpha = clamp((0.08 + intensity * 0.2) * depthRatio, 0, 0.44);
+        graphics.fillStyle(0xaed7ff, pipeLightAlpha);
+        graphics.fillEllipse(
+          projection.x,
+          pipeLightY,
+          pipeLightWidth,
+          pipeLightHeight,
         );
         const coreAlpha = clamp((0.18 + intensity * 0.28) * depthRatio, 0, 0.55);
         graphics.fillStyle(0xf6fbff, coreAlpha);

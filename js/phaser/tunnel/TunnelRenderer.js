@@ -9,12 +9,12 @@ const TRACK_SLAT_PERIOD = 2.9;
 const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
 const LAMP_BRIGHTNESS_MULTIPLIER = 100;
-const TILE_TEXTURE_ATLAS_FRAME_COUNT = 16;
 const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 1.2;
+const SINGLE_TUNNEL_TILE_FRAME = 0;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -478,15 +478,14 @@ class TunnelRenderer {
     const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
     const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
     const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
-    const texturedTileAngle = Math.atan2(quad.p2.y - quad.p1.y, quad.p2.x - quad.p1.x);
-    const gridIndex = this.getTileGridIndex(tile);
-    const atlasFrame = this.getTileAtlasFrame(gridIndex, variant);
+    void variant;
+    void tile;
     const textureSprite = this.acquireTileSprite(spriteIndex);
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
-      .setFrame(atlasFrame)
+      .setFrame(SINGLE_TUNNEL_TILE_FRAME)
       .setDisplaySize(Math.max(2, tileWidth + TILE_OVERDRAW_PX), Math.max(2, tileHeight + TILE_OVERDRAW_PX))
-      .setRotation(texturedTileAngle)
+      .setRotation(0)
       .setFlipX(false)
       .setFlipY(false)
       .setAlpha(1)
@@ -508,30 +507,6 @@ class TunnelRenderer {
     for (let i = startIndex; i < this.tileSprites.length; i += 1) {
       this.tileSprites[i].setVisible(false);
     }
-  }
-
-  getStableTileSeed(tile, variant) {
-    const seedSource = `${Math.round((tile?.angle || 0) * 10000)}:${variant}:${Math.round((tile?.depth || 0) * 1000)}:${Math.round((tile?.angleWidth || 0) * 10000)}`;
-    let hash = 2166136261;
-    for (let i = 0; i < seedSource.length; i += 1) {
-      hash ^= seedSource.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }
-
-  getTileGridIndex(tile) {
-    const angleWidth = Math.max(0.0001, tile?.angleWidth || ((Math.PI * 2) / Math.max(8, CONFIG.TUBE_SEGMENTS)));
-    const depth = Math.max(0.0001, tile?.depth || 0.06);
-    const segment = Math.round((((tile?.angle || 0) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / angleWidth);
-    const ring = Math.round((tile?.z || 0) / depth);
-    return { ring, segment };
-  }
-
-  getTileAtlasFrame(gridIndex, variant) {
-    const baseVariant = Math.abs(Math.round(variant || 0));
-    const stitchedOffset = (Math.abs(gridIndex.segment) + Math.abs(gridIndex.ring) * 3) % 3;
-    return (baseVariant * 3 + stitchedOffset) % TILE_TEXTURE_ATLAS_FRAME_COUNT;
   }
 
   drawOverlay() {

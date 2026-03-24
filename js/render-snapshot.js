@@ -8,7 +8,7 @@ const LAMP_NEAR_Z = 0.2;
 const LAMP_TOP_ANGLE = Math.PI;
 
 /**
- * @typedef {'canvas'|'phaser'} RenderBackend
+ * @typedef {'canvas'} RenderBackend
  */
 
 /**
@@ -105,7 +105,7 @@ export function createRenderSnapshot(viewport) {
 
   return {
     schemaVersion: 1,
-    backend: /** @type {RenderBackend} */ ('phaser'),
+    backend: /** @type {RenderBackend} */ ('canvas'),
     viewport: {
       width,
       height,

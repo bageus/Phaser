@@ -102,8 +102,11 @@ class MainSceneController {
         LIGHT_WAVE_VERTEX_SHADER
       );
       const shaderObject = this.scene.add.shader(lightWaveBaseShader, 0, 0, width, height);
-      if (shaderObject) {
-        this.lightWaveShader = shaderObject.setOrigin(0, 0).setDepth(6).setBlendMode('ADD');
+      if (shaderObject && typeof shaderObject.setUniform === 'function') {
+        this.lightWaveShader = shaderObject;
+        this.lightWaveShader.setOrigin?.(0, 0);
+        this.lightWaveShader.setDepth?.(6);
+        this.lightWaveShader.setBlendMode?.('ADD');
         this.lightWaveShader.setUniform('resolution.value.x', width);
         this.lightWaveShader.setUniform('resolution.value.y', height);
         this.lightWaveShader.setUniform('lampDepths.value.x', 2);

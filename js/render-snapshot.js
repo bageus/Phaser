@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { gameState, player, obstacles, bonuses, coins, spinTargets } from './state.js';
+import { gameState, player, obstacles, bonuses, coins, spinTargets, tubeTiles } from './state.js';
 
 /**
  * @typedef {'canvas'|'phaser'} RenderBackend
@@ -152,6 +152,13 @@ export function createRenderSnapshot(viewport) {
       radiusFactor: item.radiusFactor ?? null,
       collected: Boolean(item.collected),
       kind: item.kind ?? 'spin'
+    })),
+    tubeTiles: tubeTiles.map((tile) => ({
+      angle: tile.angle ?? 0,
+      z: tile.z ?? 0,
+      depth: tile.depth ?? 0.06,
+      angleWidth: tile.angleWidth ?? ((Math.PI * 2) / Math.max(3, CONFIG.TUBE_SEGMENTS)),
+      variant: tile.variant ?? 0
     })),
     fx: {
       bonusText: gameState.bonusText,

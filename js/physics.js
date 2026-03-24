@@ -1,5 +1,5 @@
 import { CONFIG, BONUS_TYPES } from './config.js';
-import { player, gameState, spinTargets, obstacles, bonuses, coins, inputQueue, DOM, curves, getLaneCooldown, setLaneCooldown } from './state.js';
+import { player, gameState, spinTargets, obstacles, bonuses, coins, tubeTiles, inputQueue, DOM, curves, getLaneCooldown, setLaneCooldown } from './state.js';
 import { audioManager } from './audio.js';
 import { spawnParticles } from './particles.js';
 import { playerEffects, playerUpgrades, getShieldUpgradeSnapshot } from './store.js';
@@ -8,6 +8,29 @@ import { project, projectPlayer, updatePlayerAnimation } from './renderer.js';
 import { endGame } from './game.js';
 
 let laneCooldown = getLaneCooldown();
+const TUBE_TILE_RING_COUNT = 28;
+const TUBE_TILE_Z_STEP = 0.06;
+const TUBE_TILE_NEAR_Z = 0.18;
+const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
+
+function initializeTubeTileGrid() {
+  if (tubeTiles.length > 0) return;
+  const segmentCount = Math.max(8, CONFIG.TUBE_SEGMENTS);
+  const angleWidth = (Math.PI * 2) / segmentCount;
+
+  for (let ring = 0; ring < TUBE_TILE_RING_COUNT; ring += 1) {
+    const z = TUBE_TILE_NEAR_Z + ring * TUBE_TILE_Z_STEP;
+    for (let segment = 0; segment < segmentCount; segment += 1) {
+      tubeTiles.push({
+        angle: segment * angleWidth,
+        angleWidth,
+        z,
+        depth: TUBE_TILE_Z_STEP,
+        variant: (ring + segment) % 3
+      });
+    }
+  }
+}
 
 function getViewportCenter() {
   const width = DOM.gameViewport?.clientWidth || window.innerWidth || 360;
@@ -57,6 +80,7 @@ function resetGameSessionState() {
   gameState.debugStats.uiMs = 0;
   gameState.debugStats.frameMs = 0;
   spinTargets.length = 0;
+  tubeTiles.length = 0;
 }
 
 /* ===== SPAWN FUNCTIONS ===== */
@@ -306,6 +330,8 @@ function update(delta) {
 
   gameState.deltaTime = delta;
 
+  initializeTubeTileGrid();
+
   const speedLevel = Math.floor(gameState.distance / CONFIG.SPEED_INCREMENT_INTERVAL);
   const speedIncrementMultiplier = gameState.distance >= CONFIG.SPEED_INCREMENT_BOOST_DISTANCE
     ? CONFIG.SPEED_INCREMENT_BOOST_MULTIPLIER
@@ -328,6 +354,9 @@ function update(delta) {
   }
 
   gameState.score += metersDelta * pointsPerMeter;
+  const rotSpeed = Math.min(CONFIG.BASE_ROTATION_SPEED * gameState.speed * 18, CONFIG.MAX_ROTATION_SPEED);
+  gameState.tubeRotation += rotSpeed * 0.01;
+  gameState.tubeScroll += gameState.speed * 40;
 
   // Coin spawning
   const coinSpacing = getSpacing("coin");
@@ -392,6 +421,13 @@ function update(delta) {
 
   for (const t of spinTargets) {
     t.z -= gameState.speed * 0.8;
+  }
+
+  for (const tile of tubeTiles) {
+    tile.z -= gameState.speed * 0.45;
+    if (tile.z <= -0.1) {
+      tile.z += TUBE_TILE_FAR_Z;
+    }
   }
 
   // Remove off-screen objects

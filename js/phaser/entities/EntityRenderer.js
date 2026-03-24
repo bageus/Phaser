@@ -454,6 +454,31 @@ class EntityRenderer {
           glowRadius,
           glowRadius * 0.46 * CONFIG.PLAYER_OFFSET,
         );
+        const shaftLength = clamp(glowRadius * 2.2 * CONFIG.PLAYER_OFFSET, 18, 132);
+        const shaftBottomY = projection.y + shaftLength;
+        const shaftCoreWidth = clamp(glowRadius * 0.45, 7, 44);
+        const shaftEdgeWidth = clamp(glowRadius * 1.45, 20, 128);
+        const shaftAlphaBase = clamp((0.05 + intensity * 0.12) * depthRatio, 0, 0.32);
+
+        for (let pass = 0; pass < 4; pass += 1) {
+          const passRatio = pass / 3;
+          const beamY = projection.y + shaftLength * (0.2 + passRatio * 0.62);
+          const beamWidth = shaftCoreWidth + (shaftEdgeWidth - shaftCoreWidth) * passRatio;
+          const beamHeight = clamp(glowRadius * (0.14 + passRatio * 0.13), 3, 20);
+          const beamAlpha = shaftAlphaBase * (1 - passRatio * 0.58);
+          graphics.fillStyle(0xbfe1ff, beamAlpha);
+          graphics.fillEllipse(projection.x, beamY, beamWidth, beamHeight);
+        }
+
+        const shaftFadeAlpha = clamp((0.04 + intensity * 0.08) * depthRatio, 0, 0.2);
+        graphics.fillStyle(0x9bc9f2, shaftFadeAlpha);
+        graphics.fillEllipse(
+          projection.x,
+          (projection.y + shaftBottomY) * 0.5,
+          shaftEdgeWidth,
+          shaftLength,
+        );
+
         const pipeLightY = projection.y + glowRadius * 1.08;
         const pipeLightWidth = clamp(glowRadius * 1.9, 20, 150);
         const pipeLightHeight = clamp(glowRadius * 0.86 * CONFIG.PLAYER_OFFSET, 8, 64);

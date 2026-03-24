@@ -15,6 +15,7 @@ const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 2;
 const TUNNEL_TILE_FRAME_COUNT = 16;
+const TILE_TOP_WIDTH_MULTIPLIER = 1.18;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -453,8 +454,15 @@ class TunnelRenderer {
       const radius2 = Math.max(innerRadius, CONFIG.TUBE_RADIUS * scale2);
       const bend1 = 1 - scale1;
       const bend2 = 1 - scale2;
-      const angleA = tile.angle + tube.rotation + tube.curveAngle;
-      const angleB = angleA + (tile.angleWidth || ((Math.PI * 2) / Math.max(8, CONFIG.TUBE_SEGMENTS)));
+      const baseAngleA = tile.angle + tube.rotation + tube.curveAngle;
+      const baseAngleWidth = tile.angleWidth || ((Math.PI * 2) / Math.max(8, CONFIG.TUBE_SEGMENTS));
+      const nearHalfAngleWidth = baseAngleWidth * 0.5;
+      const farHalfAngleWidth = nearHalfAngleWidth * TILE_TOP_WIDTH_MULTIPLIER;
+      const segmentCenterAngle = baseAngleA + nearHalfAngleWidth;
+      const angleA = segmentCenterAngle - nearHalfAngleWidth;
+      const angleB = segmentCenterAngle + nearHalfAngleWidth;
+      const angleFarA = segmentCenterAngle - farHalfAngleWidth;
+      const angleFarB = segmentCenterAngle + farHalfAngleWidth;
       const depthRatio = clamp(1 - z1 / 2, 0, 1);
       const tileDepthStep = z1 / CONFIG.TUBE_Z_STEP;
       let spawnBlend = 0;
@@ -465,7 +473,7 @@ class TunnelRenderer {
           spawnBlend = lampBlend;
         }
       }
-      const segmentMidAngle = (angleA + angleB) * 0.5;
+      const segmentMidAngle = segmentCenterAngle;
       const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
       const wallColor = blendColor(0x02040b, 0x182a43, depthRatio * 0.5);
       const variantDepthBoost = tile.variant === 4 ? -0.02 : 0;
@@ -476,10 +484,10 @@ class TunnelRenderer {
       const y1 = centerY + Math.cos(angleA) * radius1 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend1;
       const x2 = centerX + Math.sin(angleB) * radius1 + (tube.centerOffsetX || 0) * bend1;
       const y2 = centerY + Math.cos(angleB) * radius1 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend1;
-      const x3 = centerX + Math.sin(angleB) * radius2 + (tube.centerOffsetX || 0) * bend2;
-      const y3 = centerY + Math.cos(angleB) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
-      const x4 = centerX + Math.sin(angleA) * radius2 + (tube.centerOffsetX || 0) * bend2;
-      const y4 = centerY + Math.cos(angleA) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
+      const x3 = centerX + Math.sin(angleFarB) * radius2 + (tube.centerOffsetX || 0) * bend2;
+      const y3 = centerY + Math.cos(angleFarB) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
+      const x4 = centerX + Math.sin(angleFarA) * radius2 + (tube.centerOffsetX || 0) * bend2;
+      const y4 = centerY + Math.cos(angleFarA) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
 
       this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
       drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);

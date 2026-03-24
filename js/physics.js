@@ -15,6 +15,11 @@ const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_ST
 const TUBE_TILE_VARIANT_COUNT = 5;
 const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
 
+function getDeterministicTileVariant(ring, segment) {
+  // Шаблон 2x2 сохраняет повторяемую сетку и убирает "шум" от случайного выбора.
+  return (ring + segment) % TUBE_TILE_VARIANT_COUNT;
+}
+
 function initializeTubeTileGrid() {
   if (tubeTiles.length > 0) return;
   const segmentCount = Math.max(8, CONFIG.TUBE_SEGMENTS);
@@ -28,7 +33,7 @@ function initializeTubeTileGrid() {
         angleWidth,
         z,
         depth: TUBE_TILE_Z_STEP,
-        variant: Math.floor(Math.random() * TUBE_TILE_VARIANT_COUNT)
+        variant: getDeterministicTileVariant(ring, segment)
       });
     }
   }

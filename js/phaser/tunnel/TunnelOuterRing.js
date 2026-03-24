@@ -1,6 +1,6 @@
 const BASE_URL = import.meta.env.BASE_URL || './';
-const TUNNEL_OUTER_RING_TEXTURE_KEY = 'metal2_layer_1.png';
-const TUNNEL_OUTER_RING_TEXTURE_PATH = 'img/metal2_layer_1.png';
+const TUNNEL_OUTER_RING_TEXTURE_KEY = 'metal_ring.webp';
+const TUNNEL_OUTER_RING_TEXTURE_PATH = 'img/metal_ring.webp';
 const DEFAULT_ROTATION_SPEED = 0;
 const TUNNEL_OUTER_RING_SOURCE_WIDTH = 2048;
 const TUNNEL_OUTER_RING_SOURCE_HEIGHT = 1365;

@@ -9,15 +9,10 @@ const TRACK_SLAT_PERIOD = 2.9;
 const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
 const LAMP_BRIGHTNESS_MULTIPLIER = 100;
-const TILE_TEXTURE_ALPHA_MULTIPLIER = 0.22;
+const TILE_TEXTURE_ATLAS_FRAME_COUNT = 16;
 const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
-const NEON_PULSE_SPEED = 0.00018;
-const NEON_PULSE_MIN = 0.0;
-const NEON_PULSE_MAX = 0.14;
-const NEON_PURPLE_BASE = 0x32005f;
-const NEON_PURPLE_PEAK = 0xa73df2;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const QUALITY_PRESETS = Object.freeze({
   low: {
@@ -476,64 +471,26 @@ class TunnelRenderer {
   }
 
   drawTileTextureVariant(quad, variant, depthRatio, tile, spriteIndex) {
+    void depthRatio;
     const pTopMid = lerpPoint(quad.p1, quad.p2, 0.5);
     const pBottomMid = lerpPoint(quad.p4, quad.p3, 0.5);
     const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
     const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
     const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
-    const textureAlpha = clamp(
-      amplifiedAlpha(clamp(0.18 + depthRatio * 0.36, 0.18, 0.54) * TILE_TEXTURE_ALPHA_MULTIPLIER, 1),
-      0.05,
-      0.22,
-    );
     const texturedTileAngle = Math.atan2(quad.p2.y - quad.p1.y, quad.p2.x - quad.p1.x);
     const randomSeed = this.getStableTileSeed(tile, variant);
+    const randomFrame = randomSeed % TILE_TEXTURE_ATLAS_FRAME_COUNT;
     const quarterTurn = (randomSeed & 3) * (Math.PI / 2);
-    const flipHorizontal = (randomSeed & 4) !== 0;
-    const flipVertical = (randomSeed & 8) !== 0;
     const textureSprite = this.acquireTileSprite(spriteIndex);
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
+      .setFrame(randomFrame)
       .setDisplaySize(Math.max(2, tileWidth), Math.max(2, tileHeight))
       .setRotation(texturedTileAngle + quarterTurn)
-      .setFlipX(flipHorizontal)
-      .setFlipY(flipVertical)
-      .setAlpha(textureAlpha)
+      .setFlipX(false)
+      .setFlipY(false)
+      .setAlpha(1)
       .setVisible(true);
-
-    const detailAlpha = amplifiedAlpha(clamp(0.08 + depthRatio * 0.18, 0.08, 0.24) * TILE_TEXTURE_ALPHA_MULTIPLIER, 1);
-    this.lightGraphics.lineStyle(1, blendColor(0x172638, 0x8aaed4, depthRatio * 0.35), detailAlpha * 0.58);
-    drawQuadPath(
-      this.lightGraphics,
-      quad.p1.x,
-      quad.p1.y,
-      quad.p2.x,
-      quad.p2.y,
-      quad.p3.x,
-      quad.p3.y,
-      quad.p4.x,
-      quad.p4.y,
-    );
-    this.lightGraphics.strokePath();
-
-    const pulseTime = this.scene?.time?.now ?? 0;
-    const phaseSeed = (quad.p1.x + quad.p2.y + quad.p3.x + quad.p4.y) * 0.005;
-    const pulseWave = Math.sin(pulseTime * NEON_PULSE_SPEED + phaseSeed) * 0.5 + 0.5;
-    const neonAlpha = lerp(NEON_PULSE_MIN, NEON_PULSE_MAX, pulseWave);
-    const neonColor = blendColor(NEON_PURPLE_BASE, NEON_PURPLE_PEAK, pulseWave);
-    this.lightGraphics.lineStyle(0.8, neonColor, neonAlpha);
-    drawQuadPath(
-      this.lightGraphics,
-      quad.p1.x,
-      quad.p1.y,
-      quad.p2.x,
-      quad.p2.y,
-      quad.p3.x,
-      quad.p3.y,
-      quad.p4.x,
-      quad.p4.y,
-    );
-    this.lightGraphics.strokePath();
   }
 
   acquireTileSprite(index) {

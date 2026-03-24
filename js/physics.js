@@ -12,6 +12,7 @@ const TUBE_TILE_RING_COUNT = 28;
 const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
 const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
+const TUBE_TILE_VARIANT_COUNT = 5;
 
 function initializeTubeTileGrid() {
   if (tubeTiles.length > 0) return;
@@ -26,7 +27,7 @@ function initializeTubeTileGrid() {
         angleWidth,
         z,
         depth: TUBE_TILE_Z_STEP,
-        variant: (ring + segment) % 3
+        variant: Math.floor(Math.random() * TUBE_TILE_VARIANT_COUNT)
       });
     }
   }

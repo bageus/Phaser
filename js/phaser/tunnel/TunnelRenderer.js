@@ -8,6 +8,11 @@ const TRACK_EDGE_SOFTNESS = 0.12;
 const TRACK_SLAT_PERIOD = 2.9;
 const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
+const LAMP_SPACING_METERS = 30;
+const LAMP_VISIBLE_COUNT = 9;
+const LAMP_Z_SPACING = 0.22;
+const LAMP_NEAR_Z = 0.2;
+const LAMP_TOP_ANGLE = Math.PI;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -64,6 +69,14 @@ function lerpPoint(a, b, t) {
 
 function normalizeAngleDiff(diff) {
   return diff - Math.PI * 2 * Math.round(diff / (Math.PI * 2));
+}
+
+function fract(value) {
+  return value - Math.floor(value);
+}
+
+function seededNoise(seed) {
+  return fract(Math.sin(seed * 127.1) * 43758.5453123);
 }
 
 function getTrackCoverage(angle, tubeRotation, curveAngle) {
@@ -361,6 +374,7 @@ class TunnelRenderer {
 
     }
 
+    this.drawCeilingLamps(centerX, centerY, tube);
     this.drawMouthRing(centerX, centerY, tube);
   }
 
@@ -412,6 +426,97 @@ class TunnelRenderer {
         },
         tile.variant ?? 0,
         depthRatio,
+      );
+    }
+
+    this.drawCeilingLamps(centerX, centerY, tube);
+  }
+
+  drawCeilingLamps(centerX, centerY, tube) {
+    const distance = this.snapshot?.runtime?.distance || 0;
+    const metersPhase = ((distance % LAMP_SPACING_METERS) + LAMP_SPACING_METERS) % LAMP_SPACING_METERS;
+    const metersToNextLamp = LAMP_SPACING_METERS - metersPhase;
+    const animationTime = (tube.scroll || 0) * 0.02 + distance * 0.006;
+    const innerRadius = CONFIG.TUBE_RADIUS * INNER_RADIUS_RATIO;
+
+    for (let lampOrder = 0; lampOrder < LAMP_VISIBLE_COUNT; lampOrder += 1) {
+      const lampDistanceMeters = metersToNextLamp + lampOrder * LAMP_SPACING_METERS;
+      const lampDepthUnits = lampDistanceMeters / LAMP_SPACING_METERS;
+      const lampZ = LAMP_NEAR_Z + lampDepthUnits * LAMP_Z_SPACING;
+      const lampScale = 1 - lampZ;
+      if (lampScale <= 0) {
+        continue;
+      }
+
+      const radius = Math.max(innerRadius, CONFIG.TUBE_RADIUS * lampScale);
+      const bend = 1 - lampScale;
+      const lampAngle = LAMP_TOP_ANGLE + tube.rotation + tube.curveAngle;
+      const lampX =
+        centerX + Math.sin(lampAngle) * radius + (tube.centerOffsetX || 0) * bend;
+      const lampY =
+        centerY +
+        Math.cos(lampAngle) * radius * CONFIG.PLAYER_OFFSET +
+        (tube.centerOffsetY || 0) * bend;
+      const depthRatio = clamp(1 - lampZ / 2.2, 0, 1);
+      const lampIndex = Math.floor((distance + lampDistanceMeters) / LAMP_SPACING_METERS);
+      const lampSeed = lampIndex * 1.13 + 7.1;
+      const faultChance = seededNoise(lampSeed);
+      const flickerChance = seededNoise(lampSeed + 17.3);
+      const brightnessSeed = seededNoise(lampSeed + 41.9);
+      const isBroken = faultChance < 0.16;
+      const isFlickering = !isBroken && flickerChance < 0.28;
+      const baseIntensity = 0.55 + brightnessSeed * 0.95;
+
+      let intensity = baseIntensity;
+      if (isBroken) {
+        intensity = 0;
+      } else if (isFlickering) {
+        const flickerWave = 0.45 + Math.sin(animationTime * 19 + lampSeed * 5.3) * 0.55;
+        const flutter = Math.sin(animationTime * 53 + lampSeed * 21.7) > 0.68 ? 0.15 : 1;
+        intensity *= flickerWave * flutter;
+      }
+
+      intensity = clamp(intensity, 0, 1.45);
+      const lampBodyWidth = clamp(11 * lampScale + 2.4, 2.6, 15);
+      const lampBodyHeight = clamp(7 * lampScale + 1.8, 2.2, 9.5);
+      const lampBodyColor = isBroken ? 0x3a4659 : blendColor(0x4d5f78, 0x9fb6cf, depthRatio * 0.52);
+      this.baseGraphics.fillStyle(lampBodyColor, 0.7 + depthRatio * 0.24);
+      this.baseGraphics.fillEllipse(
+        lampX,
+        lampY,
+        lampBodyWidth,
+        lampBodyHeight,
+      );
+
+      const supportY = lampY - lampBodyHeight * 0.9;
+      this.baseGraphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);
+      this.baseGraphics.beginPath();
+      this.baseGraphics.moveTo(lampX, supportY);
+      this.baseGraphics.lineTo(lampX, lampY - lampBodyHeight * 0.2);
+      this.baseGraphics.strokePath();
+
+      if (intensity <= 0.01) {
+        continue;
+      }
+
+      const glowRadius = clamp(radius * (0.16 + intensity * 0.05), 10, 62);
+      const glowY = lampY + glowRadius * 0.28;
+      const glowAlpha = clamp((0.08 + intensity * 0.18) * depthRatio, 0, 0.42);
+      const glowColor = intensity > 1.05 ? 0xe8f2ff : blendColor(0x8ab5e8, 0xd8ebff, intensity * 0.6);
+      this.lightGraphics.fillStyle(glowColor, glowAlpha);
+      this.lightGraphics.fillEllipse(
+        lampX,
+        glowY,
+        glowRadius,
+        glowRadius * 0.46 * CONFIG.PLAYER_OFFSET,
+      );
+
+      const coreAlpha = clamp((0.18 + intensity * 0.28) * depthRatio, 0, 0.55);
+      this.lightGraphics.fillStyle(0xf6fbff, coreAlpha);
+      this.lightGraphics.fillCircle(
+        lampX,
+        lampY,
+        clamp(2.6 * lampScale + intensity * 1.9, 1.1, 5.2),
       );
     }
   }

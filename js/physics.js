@@ -11,7 +11,9 @@ let laneCooldown = getLaneCooldown();
 const TUBE_TILE_RING_COUNT = 18;
 const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
-const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
+const TUBE_TILE_DEPTH_SPAN = TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
+const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_DEPTH_SPAN;
+const TUBE_TILE_WRAP_Z = TUBE_TILE_NEAR_Z - TUBE_TILE_Z_STEP;
 const TUBE_TILE_VARIANT_COUNT = 4;
 const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
 
@@ -435,8 +437,10 @@ function update(delta) {
 
   for (const tile of tubeTiles) {
     tile.z -= tubeTileScrollDelta;
-    if (tile.z <= -0.1) {
-      tile.z += TUBE_TILE_FAR_Z;
+    if (tile.z <= TUBE_TILE_WRAP_Z) {
+      // Важно: переносим на длину сетки (span), а не на абсолютную far-позицию.
+      // Иначе между циклами появлялся зазор по глубине (чёрное кольцо).
+      tile.z += TUBE_TILE_DEPTH_SPAN;
     }
   }
 

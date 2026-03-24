@@ -533,7 +533,6 @@ class TunnelRenderer {
       }
       usedSprites += 1;
     }
-
     for (const overlay of spawnedRingOverlays) {
       drawSoftWaveOverlay(this.lightGraphics, overlay, 0.3, 1.15);
     }

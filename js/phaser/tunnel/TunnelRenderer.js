@@ -1,6 +1,13 @@
 import { CONFIG } from '../../config.js';
 
 const INNER_RADIUS_RATIO = 0.15;
+const LANE_ANGLE_STEP = 0.55;
+const TRACK_LANE_CENTERS = Object.freeze([-1, 0, 1]);
+const TRACK_BAND_HALF_WIDTH = 0.24;
+const TRACK_EDGE_SOFTNESS = 0.12;
+const TRACK_SLAT_PERIOD = 2.9;
+const TRACK_SLAT_LENGTH = 0.82;
+const TRACK_SLAT_SOFTNESS = 0.22;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -46,6 +53,28 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.lineTo(x3, y3);
   graphics.lineTo(x4, y4);
   graphics.closePath();
+}
+
+function normalizeAngleDiff(diff) {
+  return diff - Math.PI * 2 * Math.round(diff / (Math.PI * 2));
+}
+
+function getTrackCoverage(angle, tubeRotation, curveAngle) {
+  const segmentAngle = angle - tubeRotation - curveAngle;
+  let strongestCoverage = 0;
+
+  for (const lane of TRACK_LANE_CENTERS) {
+    const laneAngle = lane * LANE_ANGLE_STEP;
+    const diff = Math.abs(normalizeAngleDiff(segmentAngle - laneAngle));
+    if (diff > TRACK_BAND_HALF_WIDTH + TRACK_EDGE_SOFTNESS) {
+      continue;
+    }
+
+    const localCoverage = 1 - clamp((diff - TRACK_BAND_HALF_WIDTH) / TRACK_EDGE_SOFTNESS, 0, 1);
+    strongestCoverage = Math.max(strongestCoverage, localCoverage);
+  }
+
+  return strongestCoverage;
 }
 
 class TunnelRenderer {
@@ -171,6 +200,7 @@ class TunnelRenderer {
     depthEntries.sort((a, b) => b.animatedDepth - a.animatedDepth);
 
     const spawnedRingOverlays = [];
+    const trackSlatOverlays = [];
 
     for (const depthEntry of depthEntries) {
       const { animatedDepth, isSpawnedRing } = depthEntry;
@@ -199,6 +229,8 @@ class TunnelRenderer {
             2 +
           tube.rotation +
           tube.curveAngle;
+        const segmentMidAngle = (boundaryA + boundaryB) * 0.5;
+        const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
 
         const x1 =
           centerX +
@@ -234,9 +266,31 @@ class TunnelRenderer {
           (tube.centerOffsetY || 0) * bend2;
 
         const tileFillAlpha = clamp(quality.segmentAlpha * spawnBlend, 0.2, 1);
-        this.baseGraphics.fillStyle(wallColor, tileFillAlpha);
+        const trackWallColor = blendColor(wallColor, 0x7aa3cf, 0.32 * trackCoverage);
+        this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
         drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
         this.baseGraphics.fillPath();
+
+        if (trackCoverage > 0) {
+          const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
+          const slatVisibility = 1 - clamp((treadPhase - TRACK_SLAT_LENGTH) / TRACK_SLAT_SOFTNESS, 0, 1);
+          if (slatVisibility > 0) {
+            trackSlatOverlays.push({
+              x1,
+              y1,
+              x2,
+              y2,
+              x3,
+              y3,
+              x4,
+              y4,
+              depthRatio,
+              trackCoverage,
+              slatVisibility,
+              spawnBlend,
+            });
+          }
+        }
 
         if (isSpawnedRing) {
           spawnedRingOverlays.push({
@@ -254,6 +308,31 @@ class TunnelRenderer {
           });
         }
       }
+    }
+
+    for (const slat of trackSlatOverlays) {
+      const slatColor = blendColor(0x66a3ff, 0xffffff, slat.depthRatio * 0.5);
+      const slatAlpha = clamp(
+        (0.14 + slat.depthRatio * 0.2) *
+          slat.trackCoverage *
+          slat.slatVisibility *
+          slat.spawnBlend,
+        0,
+        0.38,
+      );
+      this.lightGraphics.fillStyle(slatColor, slatAlpha);
+      drawQuadPath(
+        this.lightGraphics,
+        slat.x1,
+        slat.y1,
+        slat.x2,
+        slat.y2,
+        slat.x3,
+        slat.y3,
+        slat.x4,
+        slat.y4,
+      );
+      this.lightGraphics.fillPath();
     }
 
     for (const overlay of spawnedRingOverlays) {

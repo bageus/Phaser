@@ -61,6 +61,32 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.closePath();
 }
 
+function fillQuad(graphics, quad) {
+  drawQuadPath(
+    graphics,
+    quad.p1.x,
+    quad.p1.y,
+    quad.p2.x,
+    quad.p2.y,
+    quad.p3.x,
+    quad.p3.y,
+    quad.p4.x,
+    quad.p4.y,
+  );
+  graphics.fillPath();
+}
+
+function getQuadBand(quad, startRatio, endRatio) {
+  const clampedStart = clamp(startRatio, 0, 1);
+  const clampedEnd = clamp(endRatio, clampedStart, 1);
+  return {
+    p1: lerpPoint(quad.p1, quad.p4, clampedStart),
+    p2: lerpPoint(quad.p2, quad.p3, clampedStart),
+    p3: lerpPoint(quad.p2, quad.p3, clampedEnd),
+    p4: lerpPoint(quad.p1, quad.p4, clampedEnd),
+  };
+}
+
 function lerpPoint(a, b, t) {
   return {
     x: lerp(a.x, b.x, t),
@@ -434,13 +460,24 @@ class TunnelRenderer {
     const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
     const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
 
-    // Общий объём: мягкая подсветка сверху и затемнение снизу.
-    const topGlowCenter = lerpPoint(pTopMid, pCenter, 0.32);
-    const bottomShadeCenter = lerpPoint(pBottomMid, pCenter, 0.3);
-    this.lightGraphics.fillStyle(blendColor(0x6f95bc, 0xd8ebff, depthRatio * 0.52), detailAlpha * 0.5);
-    this.lightGraphics.fillEllipse(topGlowCenter.x, topGlowCenter.y, tileWidth * 0.58, tileHeight * 0.18);
-    this.lightGraphics.fillStyle(blendColor(0x03060d, 0x112033, depthRatio * 0.45), detailAlpha * 0.52);
-    this.lightGraphics.fillEllipse(bottomShadeCenter.x, bottomShadeCenter.y, tileWidth * 0.62, tileHeight * 0.24);
+    // Общий объём: подсветка и тень как полосы внутри той же геометрии плитки.
+    // Это убирает эффект «висящих» эллипсов, оторванных от поверхности.
+    const topGlowBandOuter = getQuadBand(quad, 0.04, 0.36);
+    const topGlowBandInner = getQuadBand(quad, 0.1, 0.29);
+    const centerBlendBand = getQuadBand(quad, 0.28, 0.62);
+    const bottomShadeBandOuter = getQuadBand(quad, 0.58, 0.94);
+    const bottomShadeBandInner = getQuadBand(quad, 0.66, 0.9);
+
+    this.lightGraphics.fillStyle(blendColor(0x6f95bc, 0xd8ebff, depthRatio * 0.52), detailAlpha * 0.36);
+    fillQuad(this.lightGraphics, topGlowBandOuter);
+    this.lightGraphics.fillStyle(blendColor(0x8fb5da, 0xe7f3ff, depthRatio * 0.56), detailAlpha * 0.32);
+    fillQuad(this.lightGraphics, topGlowBandInner);
+    this.lightGraphics.fillStyle(blendColor(0x0f1b2b, 0x2a3f58, depthRatio * 0.34), detailAlpha * 0.12);
+    fillQuad(this.lightGraphics, centerBlendBand);
+    this.lightGraphics.fillStyle(blendColor(0x03060d, 0x112033, depthRatio * 0.45), detailAlpha * 0.34);
+    fillQuad(this.lightGraphics, bottomShadeBandOuter);
+    this.lightGraphics.fillStyle(blendColor(0x010309, 0x0d1827, depthRatio * 0.42), detailAlpha * 0.28);
+    fillQuad(this.lightGraphics, bottomShadeBandInner);
 
     switch (variant % 5) {
       case 0: {

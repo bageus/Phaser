@@ -8,6 +8,20 @@ const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TUNNEL_TILE_TEXTURE_PATH = 'img/sci_fi_tileset_16_256.webp';
 const TUNNEL_TILE_TEXTURE_ATLAS_PATH = 'img/sci_fi_tileset_16_256_atlas.json';
 const LIGHT_WAVE_SHADER_KEY = 'LightWaveShader';
+
+const LIGHT_WAVE_VERTEX_SHADER = `
+precision mediump float;
+
+attribute vec2 inPosition;
+attribute vec2 inTexCoord;
+
+uniform mat4 uProjectionMatrix;
+
+void main(void) {
+  gl_Position = uProjectionMatrix * vec4(inPosition, 0.0, 1.0);
+}
+`;
+
 const LIGHT_WAVE_FRAGMENT_SHADER = `
 precision mediump float;
 
@@ -38,7 +52,8 @@ void main(void) {
 `;
 
 class MainSceneController {
-  constructor(scene) {
+  constructor(scene, Phaser) {
+    this.Phaser = Phaser;
     this.scene = scene;
     this.snapshot = null;
     this.background = null;
@@ -67,12 +82,14 @@ class MainSceneController {
     const { width, height } = this.scene.scale;
     this.background = this.scene.add.rectangle(0, 0, width, height, 0x050816).setOrigin(0, 0);
 
-    if (!this.scene.cache.shader.exists(LIGHT_WAVE_SHADER_KEY)) {
-      this.scene.cache.shader.add(LIGHT_WAVE_SHADER_KEY, LIGHT_WAVE_FRAGMENT_SHADER);
-    }
+    const lightWaveBaseShader = new this.Phaser.Display.BaseShader(
+      LIGHT_WAVE_SHADER_KEY,
+      LIGHT_WAVE_FRAGMENT_SHADER,
+      LIGHT_WAVE_VERTEX_SHADER
+    );
 
     this.lightWaveShader = this.scene.add
-      .shader(LIGHT_WAVE_SHADER_KEY, 0, 0, width, height)
+      .shader(lightWaveBaseShader, 0, 0, width, height)
       .setOrigin(0, 0)
       .setDepth(6)
       .setBlendMode('ADD');
@@ -131,7 +148,7 @@ function createMainSceneClass(Phaser) {
   return class MainScene extends Phaser.Scene {
     constructor() {
       super({ key: MAIN_SCENE_KEY });
-      this.controller = new MainSceneController(this);
+      this.controller = new MainSceneController(this, Phaser);
     }
 
     init(data) {

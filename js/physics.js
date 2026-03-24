@@ -356,8 +356,7 @@ function update(delta) {
   }
 
   gameState.score += metersDelta * pointsPerMeter;
-  const rotSpeed = Math.min(CONFIG.BASE_ROTATION_SPEED * gameState.speed * 18, CONFIG.MAX_ROTATION_SPEED);
-  gameState.tubeRotation += rotSpeed * 0.01;
+  gameState.tubeRotation = 0;
   gameState.tubeScroll += gameState.speed * 40;
 
   // Coin spawning

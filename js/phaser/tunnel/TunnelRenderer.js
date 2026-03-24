@@ -123,6 +123,7 @@ class TunnelRenderer {
     this.flashGraphics = null;
     this.snapshot = null;
     this.tileSprites = [];
+    this.tileMaskEntries = [];
   }
 
   create() {
@@ -164,6 +165,11 @@ class TunnelRenderer {
       sprite.destroy();
     }
     this.tileSprites = [];
+    for (const maskEntry of this.tileMaskEntries) {
+      maskEntry.mask.destroy();
+      maskEntry.graphics.destroy();
+    }
+    this.tileMaskEntries = [];
   }
 
   drawMouthRing(centerX, centerY, tube) {
@@ -476,20 +482,39 @@ class TunnelRenderer {
     const pTopMid = lerpPoint(quad.p1, quad.p2, 0.5);
     const pBottomMid = lerpPoint(quad.p4, quad.p3, 0.5);
     const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
-    const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
-    const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
+    const topWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
+    const bottomWidth = Math.hypot(quad.p4.x - quad.p3.x, quad.p4.y - quad.p3.y);
+    const leftHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
+    const rightHeight = Math.hypot(quad.p2.x - quad.p3.x, quad.p2.y - quad.p3.y);
+    const tileWidth = Math.max(topWidth, bottomWidth);
+    const tileHeight = Math.max(leftHeight, rightHeight);
+    const tileAngle = Math.atan2(quad.p2.y - quad.p1.y, quad.p2.x - quad.p1.x);
     void tile;
     const frameIndex = Number.isFinite(variant) ? Math.abs(Math.trunc(variant)) % TUNNEL_TILE_FRAME_COUNT : 0;
     const frameName = `tile_${String(frameIndex).padStart(2, '0')}`;
     const textureSprite = this.acquireTileSprite(spriteIndex);
+    const tileMaskEntry = this.acquireTileMaskEntry(spriteIndex);
+
+    const maskGraphics = tileMaskEntry.graphics;
+    maskGraphics.clear();
+    maskGraphics.fillStyle(0xffffff, 1);
+    maskGraphics.beginPath();
+    maskGraphics.moveTo(quad.p1.x, quad.p1.y);
+    maskGraphics.lineTo(quad.p2.x, quad.p2.y);
+    maskGraphics.lineTo(quad.p3.x, quad.p3.y);
+    maskGraphics.lineTo(quad.p4.x, quad.p4.y);
+    maskGraphics.closePath();
+    maskGraphics.fillPath();
+
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
       .setFrame(frameName)
       .setDisplaySize(Math.max(2, tileWidth + TILE_OVERDRAW_PX), Math.max(2, tileHeight + TILE_OVERDRAW_PX))
-      .setRotation(0)
+      .setRotation(tileAngle)
       .setFlipX(false)
       .setFlipY(false)
       .setAlpha(1)
+      .setMask(tileMaskEntry.mask)
       .setVisible(true);
   }
 
@@ -504,9 +529,23 @@ class TunnelRenderer {
     return this.tileSprites[index];
   }
 
+  acquireTileMaskEntry(index) {
+    if (!this.tileMaskEntries[index]) {
+      const graphics = this.scene.make.graphics({ x: 0, y: 0, add: true });
+      graphics.setVisible(false);
+      const mask = graphics.createGeometryMask();
+      this.tileMaskEntries[index] = { graphics, mask };
+    }
+    return this.tileMaskEntries[index];
+  }
+
   hideUnusedTileSprites(startIndex) {
     for (let i = startIndex; i < this.tileSprites.length; i += 1) {
+      this.tileSprites[i].clearMask(true);
       this.tileSprites[i].setVisible(false);
+      if (this.tileMaskEntries[i]) {
+        this.tileMaskEntries[i].graphics.clear();
+      }
     }
   }
 

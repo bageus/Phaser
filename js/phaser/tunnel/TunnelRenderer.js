@@ -8,6 +8,12 @@ const TRACK_EDGE_SOFTNESS = 0.12;
 const TRACK_SLAT_PERIOD = 2.9;
 const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
+const LAMP_BRIGHTNESS_MULTIPLIER = 10;
+const NEON_PULSE_SPEED = 0.0008;
+const NEON_PULSE_MIN = 0.25;
+const NEON_PULSE_MAX = 0.85;
+const NEON_PURPLE_BASE = 0x7a1cff;
+const NEON_PURPLE_PEAK = 0xff4dff;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -64,6 +70,10 @@ function lerpPoint(a, b, t) {
 
 function normalizeAngleDiff(diff) {
   return diff - Math.PI * 2 * Math.round(diff / (Math.PI * 2));
+}
+
+function amplifiedAlpha(alpha, cap = 1) {
+  return clamp(alpha * LAMP_BRIGHTNESS_MULTIPLIER, 0, cap);
 }
 
 function getTrackCoverage(angle, tubeRotation, curveAngle) {
@@ -131,7 +141,7 @@ class TunnelRenderer {
     const centerShift = Math.hypot(tube.centerOffsetX || 0, tube.centerOffsetY || 0);
     const shiftBoost = clamp(centerShift / 120, 0, 0.22);
 
-    this.lightGraphics.lineStyle(4, blendColor(0x1e2635, rimColor, 0.45), 0.95);
+    this.lightGraphics.lineStyle(8, blendColor(0x1e2635, rimColor, 0.6), 1);
     this.lightGraphics.strokeEllipse(
       centerX,
       centerY,
@@ -139,7 +149,7 @@ class TunnelRenderer {
       outerRadius * 2 * CONFIG.PLAYER_OFFSET,
     );
 
-    this.lightGraphics.lineStyle(3, rimColor, 0.72 + shiftBoost);
+    this.lightGraphics.lineStyle(6, blendColor(rimColor, 0xffffff, 0.35), amplifiedAlpha(0.72 + shiftBoost, 1));
     this.lightGraphics.strokeEllipse(
       centerX,
       centerY,
@@ -147,7 +157,7 @@ class TunnelRenderer {
       innerRadius * 2 * CONFIG.PLAYER_OFFSET,
     );
 
-    this.lightGraphics.lineStyle(1, blendColor(rimColor, 0xffffff, 0.4), 0.42 + shiftBoost);
+    this.lightGraphics.lineStyle(3, blendColor(rimColor, 0xffffff, 0.65), amplifiedAlpha(0.42 + shiftBoost, 1));
     this.lightGraphics.strokeEllipse(
       centerX,
       centerY,
@@ -319,14 +329,14 @@ class TunnelRenderer {
 
     for (const slat of trackSlatOverlays) {
       const slatColor = blendColor(0x66a3ff, 0xffffff, slat.depthRatio * 0.5);
-      const slatAlpha = clamp(
+      const slatAlpha = amplifiedAlpha(clamp(
         (0.14 + slat.depthRatio * 0.2) *
           slat.trackCoverage *
           slat.slatVisibility *
           slat.spawnBlend,
         0,
         0.38,
-      );
+      ));
       this.lightGraphics.fillStyle(slatColor, slatAlpha);
       drawQuadPath(
         this.lightGraphics,
@@ -343,7 +353,7 @@ class TunnelRenderer {
     }
 
     for (const overlay of spawnedRingOverlays) {
-      const overlayAlpha = clamp((0.18 + overlay.depthRatio * 0.2) * overlay.spawnBlend, 0, 0.34);
+      const overlayAlpha = amplifiedAlpha(clamp((0.18 + overlay.depthRatio * 0.2) * overlay.spawnBlend, 0, 0.34));
       const overlayColor = blendColor(0x78b8ff, 0xffffff, overlay.depthRatio * 0.3);
       this.lightGraphics.fillStyle(overlayColor, overlayAlpha);
       drawQuadPath(
@@ -420,7 +430,7 @@ class TunnelRenderer {
     const pTopMid = lerpPoint(quad.p1, quad.p2, 0.5);
     const pBottomMid = lerpPoint(quad.p4, quad.p3, 0.5);
     const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
-    const detailAlpha = clamp(0.08 + depthRatio * 0.18, 0.08, 0.24);
+    const detailAlpha = amplifiedAlpha(clamp(0.08 + depthRatio * 0.18, 0.08, 0.24), 1);
     const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
     const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
 
@@ -514,6 +524,25 @@ class TunnelRenderer {
 
     // Легкая окантовка на каждой плитке для подчёркивания объема.
     this.lightGraphics.lineStyle(1, blendColor(0x172638, 0x8aaed4, depthRatio * 0.35), detailAlpha * 0.7);
+    drawQuadPath(
+      this.lightGraphics,
+      quad.p1.x,
+      quad.p1.y,
+      quad.p2.x,
+      quad.p2.y,
+      quad.p3.x,
+      quad.p3.y,
+      quad.p4.x,
+      quad.p4.y,
+    );
+    this.lightGraphics.strokePath();
+
+    const pulseTime = this.scene?.time?.now ?? 0;
+    const phaseSeed = (quad.p1.x + quad.p2.y + quad.p3.x + quad.p4.y) * 0.005;
+    const pulseWave = Math.sin(pulseTime * NEON_PULSE_SPEED + phaseSeed) * 0.5 + 0.5;
+    const neonAlpha = lerp(NEON_PULSE_MIN, NEON_PULSE_MAX, pulseWave);
+    const neonColor = blendColor(NEON_PURPLE_BASE, NEON_PURPLE_PEAK, pulseWave);
+    this.lightGraphics.lineStyle(2, neonColor, neonAlpha);
     drawQuadPath(
       this.lightGraphics,
       quad.p1.x,

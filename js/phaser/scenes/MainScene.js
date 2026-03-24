@@ -27,6 +27,7 @@ precision mediump float;
 
 uniform float time;
 uniform vec2 resolution;
+uniform vec2 lampDepths;
 
 void main(void) {
   vec2 uv = gl_FragCoord.xy / max(resolution.xy, vec2(1.0));
@@ -38,14 +39,23 @@ void main(void) {
   float waveB = sin(uv.y * 58.0 + time * 3.4 - centered.x * 12.0);
   float wave = 0.5 + 0.5 * (waveA * 0.65 + waveB * 0.35);
 
-  float centerGlow = smoothstep(0.66, 0.02, radial);
-  float edgeFade = smoothstep(0.95, 0.35, radial);
-  float intensity = wave * centerGlow * edgeFade;
+  float tubeCore = smoothstep(0.49, 0.02, radial);
+  float tubeOuterFade = smoothstep(0.80, 0.58, radial);
+  float tubeMask = tubeCore * tubeOuterFade;
 
-  vec3 baseColor = vec3(0.12, 0.42, 0.92);
-  vec3 highlightColor = vec3(0.62, 0.88, 1.0);
-  vec3 color = mix(baseColor, highlightColor, wave);
-  float alpha = intensity * 0.2;
+  float radialNear = 0.48;
+  float radialFar = 0.08;
+  float lampDepth0 = clamp((lampDepths.x - 0.2) / 1.8, 0.0, 1.0);
+  float lampDepth1 = clamp((lampDepths.y - 0.2) / 1.8, 0.0, 1.0);
+  float lampBand0 = 1.0 - smoothstep(0.0, 0.08, abs(radial - mix(radialNear, radialFar, lampDepth0)));
+  float lampBand1 = 1.0 - smoothstep(0.0, 0.08, abs(radial - mix(radialNear, radialFar, lampDepth1)));
+  float lampPulse = max(lampBand0, lampBand1);
+  float intensity = wave * tubeMask * (0.38 + lampPulse * 0.92);
+
+  vec3 baseColor = vec3(0.08, 0.33, 0.82);
+  vec3 highlightColor = vec3(0.64, 0.93, 1.0);
+  vec3 color = mix(baseColor, highlightColor, clamp(wave * 0.8 + lampPulse * 0.6, 0.0, 1.0));
+  float alpha = intensity * 0.24;
 
   gl_FragColor = vec4(color * intensity, alpha);
 }
@@ -93,6 +103,10 @@ class MainSceneController {
       .setOrigin(0, 0)
       .setDepth(6)
       .setBlendMode('ADD');
+    this.lightWaveShader.setUniform('resolution.value.x', width);
+    this.lightWaveShader.setUniform('resolution.value.y', height);
+    this.lightWaveShader.setUniform('lampDepths.value.x', 2);
+    this.lightWaveShader.setUniform('lampDepths.value.y', 2);
 
     this.waveStartTime = this.scene.time.now;
 
@@ -120,6 +134,11 @@ class MainSceneController {
     if (this.lightWaveShader) {
       const elapsedSeconds = (this.scene.time.now - this.waveStartTime) / 1000;
       this.lightWaveShader.setUniform('time.value', elapsedSeconds);
+      const lamps = Array.isArray(this.snapshot?.lamps) ? this.snapshot.lamps : [];
+      const lampDepthA = Number.isFinite(lamps[0]?.z) ? lamps[0].z : 2;
+      const lampDepthB = Number.isFinite(lamps[1]?.z) ? lamps[1].z : lampDepthA;
+      this.lightWaveShader.setUniform('lampDepths.value.x', lampDepthA);
+      this.lightWaveShader.setUniform('lampDepths.value.y', lampDepthB);
     }
     this.tunnelOuterRing?.update();
   }

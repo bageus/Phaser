@@ -65,8 +65,9 @@ function pseudoRandom(seedA, seedB) {
   return value - Math.floor(value);
 }
 
-function getTileVariant(depth, segment) {
-  const roll = pseudoRandom(depth + 1, segment + 1);
+function getTileVariant(depth, segment, scrollOffset = 0) {
+  const depthSeed = depth + 1 + scrollOffset;
+  const roll = pseudoRandom(depthSeed, segment + 1);
   if (roll < 0.05) return TILE_VARIANTS.topRaised;
   if (roll < 0.1) return TILE_VARIANTS.bottomRaised;
   if (roll < 0.14) return TILE_VARIANTS.cornerRaised;
@@ -181,10 +182,13 @@ class TunnelRenderer {
     const quality = QUALITY_PRESETS[qualityName] || QUALITY_PRESETS.high;
     const segmentCount = CONFIG.TUBE_SEGMENTS;
     const maxDepth = CONFIG.TUBE_DEPTH_STEPS;
+    const normalizedSpeed = clamp((tube.speed || CONFIG.SPEED_START || 1) / Math.max(0.0001, CONFIG.SPEED_START || 1), 0.2, 3);
+    const scrollOffset = (tube.scroll || 0) * 0.035 * normalizedSpeed;
 
     for (let depth = maxDepth - 1; depth >= 0; depth -= quality.depthStep) {
-      const z1 = depth * CONFIG.TUBE_Z_STEP;
-      const z2 = (depth + quality.depthStep) * CONFIG.TUBE_Z_STEP;
+      const animatedDepth = depth + scrollOffset;
+      const z1 = animatedDepth * CONFIG.TUBE_Z_STEP;
+      const z2 = (animatedDepth + quality.depthStep) * CONFIG.TUBE_Z_STEP;
       const scale1 = 1 - z1;
       const scale2 = 1 - z2;
       if (scale2 <= 0) continue;
@@ -194,7 +198,8 @@ class TunnelRenderer {
       const radius2 = Math.max(innerRadius, CONFIG.TUBE_RADIUS * scale2);
       const bend1 = 1 - scale1;
       const bend2 = 1 - scale2;
-      const depthRatio = 1 - depth / maxDepth;
+      const wrappedDepth = ((animatedDepth % maxDepth) + maxDepth) % maxDepth;
+      const depthRatio = 1 - wrappedDepth / maxDepth;
 
       const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
       const seamColor = blendColor(wallColor, 0x9dc7ff, 0.12 + depthRatio * 0.2);
@@ -242,8 +247,8 @@ class TunnelRenderer {
           Math.cos(boundaryA) * radius2 * CONFIG.PLAYER_OFFSET +
           (tube.centerOffsetY || 0) * bend2;
 
-        const tileVariant = getTileVariant(depth, i);
-        const tileNoise = pseudoRandom(depth + 17, i + 53);
+        const tileVariant = getTileVariant(depth, i, Math.floor(scrollOffset));
+        const tileNoise = pseudoRandom(animatedDepth + 17, i + 53);
         const protrusion = 1.2 + depthRatio * 2.2;
 
         let tx1 = x1;

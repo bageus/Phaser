@@ -13,6 +13,7 @@ const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
 const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
 const TUBE_TILE_VARIANT_COUNT = 5;
+const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
 
 function initializeTubeTileGrid() {
   if (tubeTiles.length > 0) return;
@@ -424,8 +425,11 @@ function update(delta) {
     t.z -= gameState.speed * 0.8;
   }
 
+  const speedGrowthRatio = Math.max(gameState.speed / Math.max(CONFIG.SPEED_START, 0.0001), 0.15);
+  const tubeTileScrollDelta = TUBE_TILE_SCROLL_BASE_PER_SECOND * speedGrowthRatio * delta;
+
   for (const tile of tubeTiles) {
-    tile.z -= gameState.speed * 0.45;
+    tile.z -= tubeTileScrollDelta;
     if (tile.z <= -0.1) {
       tile.z += TUBE_TILE_FAR_Z;
     }

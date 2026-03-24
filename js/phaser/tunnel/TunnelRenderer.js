@@ -221,7 +221,10 @@ class TunnelRenderer {
       const bend2 = 1 - scale2;
       const wrappedDepth = ((animatedDepth % maxDepth) + maxDepth) % maxDepth;
       const depthRatio = 1 - wrappedDepth / maxDepth;
-      const spawnBlend = isSpawnedRing ? clamp(ringPhase / 0.35, 0, 1) : 1;
+      // Ранее для "нового" кольца применялось плавное проявление через alpha.
+      // На некоторых кадрах это создавало полностью тёмный пояс по периметру трубы.
+      // Оставляем кольца равномерно непрозрачными, чтобы исключить артефакт.
+      const spawnBlend = 1;
 
       const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
       for (let i = 0; i < segmentCount; i += quality.segmentStep) {

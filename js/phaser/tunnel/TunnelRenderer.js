@@ -541,7 +541,10 @@ class TunnelRenderer {
 
   hideUnusedTileSprites(startIndex) {
     for (let i = startIndex; i < this.tileSprites.length; i += 1) {
-      this.tileSprites[i].clearMask(true);
+      // Keep GeometryMask instances alive between frames.
+      // Destroying them here leaves stale mask references that can cause
+      // GeometryMask.applyStencil to hit a null geometry and crash in WebGL.
+      this.tileSprites[i].clearMask(false);
       this.tileSprites[i].setVisible(false);
       if (this.tileMaskEntries[i]) {
         this.tileMaskEntries[i].graphics.clear();

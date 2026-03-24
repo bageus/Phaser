@@ -55,6 +55,13 @@ function drawQuadPath(graphics, x1, y1, x2, y2, x3, y3, x4, y4) {
   graphics.closePath();
 }
 
+function lerpPoint(a, b, t) {
+  return {
+    x: lerp(a.x, b.x, t),
+    y: lerp(a.y, b.y, t),
+  };
+}
+
 function normalizeAngleDiff(diff) {
   return diff - Math.PI * 2 * Math.round(diff / (Math.PI * 2));
 }
@@ -384,9 +391,9 @@ class TunnelRenderer {
       const depthRatio = clamp(1 - z1 / 2, 0, 1);
       const segmentMidAngle = (angleA + angleB) * 0.5;
       const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
-      const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
-      const variantGlow = tile.variant === 1 ? 0.03 : tile.variant === 2 ? 0.06 : 0;
-      const tileFillAlpha = clamp(quality.segmentAlpha + variantGlow, 0.18, 1);
+      const wallColor = blendColor(0x04060f, 0x1f3552, depthRatio * 0.56);
+      const variantDepthBoost = tile.variant === 4 ? -0.02 : 0;
+      const tileFillAlpha = clamp(quality.segmentAlpha + variantDepthBoost, 0.2, 1);
       const trackWallColor = blendColor(wallColor, 0x7aa3cf, 0.32 * trackCoverage);
 
       const x1 = centerX + Math.sin(angleA) * radius1 + (tube.centerOffsetX || 0) * bend1;
@@ -401,7 +408,102 @@ class TunnelRenderer {
       this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
       drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
       this.baseGraphics.fillPath();
+      this.drawTileTextureVariant(
+        {
+          p1: { x: x1, y: y1 },
+          p2: { x: x2, y: y2 },
+          p3: { x: x3, y: y3 },
+          p4: { x: x4, y: y4 },
+        },
+        tile.variant ?? 0,
+        depthRatio,
+      );
     }
+  }
+
+  drawTileTextureVariant(quad, variant, depthRatio) {
+    const pTopMid = lerpPoint(quad.p1, quad.p2, 0.5);
+    const pBottomMid = lerpPoint(quad.p4, quad.p3, 0.5);
+    const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
+    const detailAlpha = clamp(0.08 + depthRatio * 0.18, 0.08, 0.24);
+
+    switch (variant % 5) {
+      case 0: {
+        // Плитка с небольшим выступом в верхней/нижней зоне и в углу.
+        const topBumpL = lerpPoint(quad.p1, quad.p2, 0.22);
+        const topBumpR = lerpPoint(quad.p1, quad.p2, 0.45);
+        const bottomBumpL = lerpPoint(quad.p4, quad.p3, 0.58);
+        const bottomBumpR = lerpPoint(quad.p4, quad.p3, 0.82);
+        const cornerBump = lerpPoint(quad.p2, quad.p3, 0.2);
+        this.lightGraphics.fillStyle(blendColor(0x55769b, 0xcce3ff, depthRatio * 0.45), detailAlpha * 0.8);
+        this.lightGraphics.fillCircle(topBumpL.x, topBumpL.y, 1.5);
+        this.lightGraphics.fillCircle(topBumpR.x, topBumpR.y, 1.2);
+        this.lightGraphics.fillCircle(bottomBumpL.x, bottomBumpL.y, 1.3);
+        this.lightGraphics.fillCircle(bottomBumpR.x, bottomBumpR.y, 1.1);
+        this.lightGraphics.fillCircle(cornerBump.x, cornerBump.y, 1.4);
+        break;
+      }
+      case 1: {
+        // Плитка со сколом.
+        const chipA = lerpPoint(quad.p2, quad.p3, 0.18);
+        const chipB = lerpPoint(quad.p2, quad.p3, 0.33);
+        const chipC = lerpPoint(quad.p2, quad.p1, 0.18);
+        this.baseGraphics.fillStyle(0x020308, clamp(detailAlpha * 1.2, 0.09, 0.3));
+        this.baseGraphics.beginPath();
+        this.baseGraphics.moveTo(chipA.x, chipA.y);
+        this.baseGraphics.lineTo(chipB.x, chipB.y);
+        this.baseGraphics.lineTo(chipC.x, chipC.y);
+        this.baseGraphics.closePath();
+        this.baseGraphics.fillPath();
+        break;
+      }
+      case 2: {
+        // Плитка с шершавостью в центре.
+        const gritColor = blendColor(0x1f2d3f, 0x6e8eaf, depthRatio * 0.45);
+        this.lightGraphics.fillStyle(gritColor, detailAlpha * 0.5);
+        this.lightGraphics.fillCircle(pCenter.x - 2, pCenter.y - 1, 0.9);
+        this.lightGraphics.fillCircle(pCenter.x + 1, pCenter.y + 1.4, 0.8);
+        this.lightGraphics.fillCircle(pCenter.x + 2.3, pCenter.y - 0.7, 0.7);
+        this.lightGraphics.fillCircle(pCenter.x - 0.8, pCenter.y + 2, 0.65);
+        break;
+      }
+      case 3: {
+        // Плитка с трещиной.
+        const crackStart = lerpPoint(quad.p1, quad.p4, 0.25);
+        const crackMid = lerpPoint(pTopMid, pBottomMid, 0.5);
+        const crackEnd = lerpPoint(quad.p2, quad.p3, 0.74);
+        this.lightGraphics.lineStyle(1, blendColor(0x0b1624, 0x8fb2d3, depthRatio * 0.2), detailAlpha * 1.2);
+        this.lightGraphics.beginPath();
+        this.lightGraphics.moveTo(crackStart.x, crackStart.y);
+        this.lightGraphics.lineTo(crackMid.x - 1.2, crackMid.y + 1.4);
+        this.lightGraphics.lineTo(crackMid.x + 0.6, crackMid.y - 0.9);
+        this.lightGraphics.lineTo(crackEnd.x, crackEnd.y);
+        this.lightGraphics.strokePath();
+        break;
+      }
+      case 4:
+      default: {
+        // Гладкая плитка: только мягкий центральный градиент без дефектов.
+        this.lightGraphics.fillStyle(blendColor(0x101a28, 0x3f5d80, depthRatio * 0.5), detailAlpha * 0.35);
+        this.lightGraphics.fillEllipse(pCenter.x, pCenter.y, Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y) * 0.35, 3.4);
+        break;
+      }
+    }
+
+    // Легкая окантовка на каждой плитке для подчёркивания объема.
+    this.lightGraphics.lineStyle(1, blendColor(0x172638, 0x8aaed4, depthRatio * 0.35), detailAlpha * 0.7);
+    drawQuadPath(
+      this.lightGraphics,
+      quad.p1.x,
+      quad.p1.y,
+      quad.p2.x,
+      quad.p2.y,
+      quad.p3.x,
+      quad.p3.y,
+      quad.p4.x,
+      quad.p4.y,
+    );
+    this.lightGraphics.strokePath();
   }
 
   drawOverlay() {

@@ -8,8 +8,8 @@ import { project, projectPlayer, updatePlayerAnimation } from './renderer.js';
 import { endGame } from './game.js';
 
 let laneCooldown = getLaneCooldown();
-const TUBE_TILE_RING_COUNT = 56;
-const TUBE_TILE_Z_STEP = 0.03;
+const TUBE_TILE_RING_COUNT = 18;
+const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
 const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
 const TUBE_TILE_VARIANT_COUNT = 5;

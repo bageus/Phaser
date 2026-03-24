@@ -1,6 +1,7 @@
 import { EntityRenderer } from '../entities/EntityRenderer.js';
 import { TunnelRenderer } from '../tunnel/TunnelRenderer.js';
 import { TunnelOuterRing } from '../tunnel/TunnelOuterRing.js';
+import { CONFIG } from '../../config.js';
 
 const MAIN_SCENE_KEY = 'MainScene';
 
@@ -30,7 +31,7 @@ class MainSceneController {
     this.background = this.scene.add.rectangle(0, 0, width, height, 0x050816).setOrigin(0, 0);
     this.tunnelRenderer = new TunnelRenderer(this.scene);
     this.tunnelRenderer.create();
-    this.tunnelOuterRing = new TunnelOuterRing(this.scene).setScale(0.58);
+    this.tunnelOuterRing = new TunnelOuterRing(this.scene).fitToTube(CONFIG.TUBE_RADIUS, CONFIG.PLAYER_OFFSET);
     this.entityRenderer = new EntityRenderer(this.scene);
     this.entityRenderer.create();
     this.tunnelRenderer.applySnapshot(this.snapshot);

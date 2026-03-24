@@ -2,6 +2,11 @@ const BASE_URL = import.meta.env.BASE_URL || './';
 const TUNNEL_OUTER_RING_TEXTURE_KEY = 'metal2_layer_1.png';
 const TUNNEL_OUTER_RING_TEXTURE_PATH = 'img/metal2_layer_1.png';
 const DEFAULT_ROTATION_SPEED = 0.002;
+const TUNNEL_OUTER_RING_SOURCE_WIDTH = 2048;
+const TUNNEL_OUTER_RING_SOURCE_HEIGHT = 1365;
+const TUNNEL_OUTER_RING_INNER_RADIUS_X = 393;
+const TUNNEL_OUTER_RING_INNER_RADIUS_Y = 393;
+const TUNNEL_OUTER_RING_FIT_SCALE = 0.96;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -42,6 +47,26 @@ class TunnelOuterRing {
 
   setScale(scale) {
     this.image.setScale(scale);
+    return this;
+  }
+
+  fitToTube(tubeRadius, tubeVerticalScale = 1) {
+    if (!Number.isFinite(tubeRadius) || tubeRadius <= 0) {
+      return this;
+    }
+
+    const tubeRadiusX = tubeRadius;
+    const tubeRadiusY = tubeRadius * tubeVerticalScale;
+    const targetWidth =
+      tubeRadiusX *
+      (TUNNEL_OUTER_RING_SOURCE_WIDTH / TUNNEL_OUTER_RING_INNER_RADIUS_X) *
+      TUNNEL_OUTER_RING_FIT_SCALE;
+    const targetHeight =
+      tubeRadiusY *
+      (TUNNEL_OUTER_RING_SOURCE_HEIGHT / TUNNEL_OUTER_RING_INNER_RADIUS_Y) *
+      TUNNEL_OUTER_RING_FIT_SCALE;
+
+    this.image.setDisplaySize(targetWidth, targetHeight);
     return this;
   }
 

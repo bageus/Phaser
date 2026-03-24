@@ -92,21 +92,28 @@ class MainSceneController {
     const { width, height } = this.scene.scale;
     this.background = this.scene.add.rectangle(0, 0, width, height, 0x050816).setOrigin(0, 0);
 
-    const lightWaveBaseShader = new this.Phaser.Display.BaseShader(
-      LIGHT_WAVE_SHADER_KEY,
-      LIGHT_WAVE_FRAGMENT_SHADER,
-      LIGHT_WAVE_VERTEX_SHADER
-    );
-
-    this.lightWaveShader = this.scene.add
-      .shader(lightWaveBaseShader, 0, 0, width, height)
-      .setOrigin(0, 0)
-      .setDepth(6)
-      .setBlendMode('ADD');
-    this.lightWaveShader.setUniform('resolution.value.x', width);
-    this.lightWaveShader.setUniform('resolution.value.y', height);
-    this.lightWaveShader.setUniform('lampDepths.value.x', 2);
-    this.lightWaveShader.setUniform('lampDepths.value.y', 2);
+    const canUseShader =
+      typeof this.scene.add?.shader === 'function' &&
+      typeof this.Phaser?.Display?.BaseShader === 'function';
+    if (canUseShader) {
+      const lightWaveBaseShader = new this.Phaser.Display.BaseShader(
+        LIGHT_WAVE_SHADER_KEY,
+        LIGHT_WAVE_FRAGMENT_SHADER,
+        LIGHT_WAVE_VERTEX_SHADER
+      );
+      const shaderObject = this.scene.add.shader(lightWaveBaseShader, 0, 0, width, height);
+      if (shaderObject) {
+        this.lightWaveShader = shaderObject.setOrigin(0, 0).setDepth(6).setBlendMode('ADD');
+        this.lightWaveShader.setUniform('resolution.value.x', width);
+        this.lightWaveShader.setUniform('resolution.value.y', height);
+        this.lightWaveShader.setUniform('lampDepths.value.x', 2);
+        this.lightWaveShader.setUniform('lampDepths.value.y', 2);
+      } else {
+        console.warn('[MainScene] Light wave shader is unavailable in the current renderer; continuing without it.');
+      }
+    } else {
+      console.warn('[MainScene] Shader API unavailable; continuing without light wave effect.');
+    }
 
     this.waveStartTime = this.scene.time.now;
 

@@ -437,7 +437,7 @@ class EntityRenderer {
       const boostedIntensity = intensity * LAMP_LIGHT_BOOST;
       const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.2 + boostedIntensity * 0.07), 14, 420);
       const glowY = projection.y + glowRadius * 0.36;
-      const glowAlpha = clamp((0.14 + boostedIntensity * 0.26) * depthRatio, 0, 1);
+      const glowAlpha = clamp((0.14 + boostedIntensity * 0.26) * depthRatio, 0, 0.6);
 
       graphics.clear();
       graphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);

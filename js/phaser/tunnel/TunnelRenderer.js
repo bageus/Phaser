@@ -446,13 +446,6 @@ class TunnelRenderer {
     const sortedTiles = tubeTiles
       .filter((tile) => Number.isFinite(tile.z) && Number.isFinite(tile.angle))
       .sort((a, b) => b.z - a.z);
-    const lampDepthSteps = Array.isArray(this.snapshot?.lamps)
-      ? this.snapshot.lamps
-        .map((lamp) => (Number.isFinite(lamp?.z) ? lamp.z / CONFIG.TUBE_Z_STEP : NaN))
-        .filter((lampDepthStep) => Number.isFinite(lampDepthStep))
-      : [];
-    const lampPulseHalfWidth = Math.max(quality.depthStep * 1.5, 0.9);
-    const spawnedRingOverlays = [];
     let usedSprites = 0;
 
     for (const tile of sortedTiles) {
@@ -477,15 +470,6 @@ class TunnelRenderer {
       const angleFarA = segmentCenterAngle - farHalfAngleWidth;
       const angleFarB = segmentCenterAngle + farHalfAngleWidth;
       const depthRatio = clamp(1 - z1 / 2, 0, 1);
-      const tileDepthStep = z1 / CONFIG.TUBE_Z_STEP;
-      let spawnBlend = 0;
-      for (const lampDepthStep of lampDepthSteps) {
-        const lampDistance = Math.abs(tileDepthStep - lampDepthStep);
-        const lampBlend = 1 - clamp(lampDistance / lampPulseHalfWidth, 0, 1);
-        if (lampBlend > spawnBlend) {
-          spawnBlend = lampBlend;
-        }
-      }
       const segmentMidAngle = segmentCenterAngle;
       const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
       const wallColor = blendColor(0x02040b, 0x182a43, depthRatio * 0.5);
@@ -517,25 +501,7 @@ class TunnelRenderer {
         tile,
         usedSprites,
       );
-      if (spawnBlend > 0.01) {
-        spawnedRingOverlays.push({
-          x1,
-          y1,
-          x2,
-          y2,
-          x3,
-          y3,
-          x4,
-          y4,
-          depthRatio,
-          spawnBlend,
-        });
-      }
       usedSprites += 1;
-    }
-
-    for (const overlay of spawnedRingOverlays) {
-      drawSoftWaveOverlay(this.lightGraphics, overlay, 0.3, 1.15);
     }
     this.hideUnusedTileSprites(usedSprites);
   }

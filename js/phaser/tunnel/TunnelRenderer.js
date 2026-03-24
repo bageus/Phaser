@@ -184,9 +184,26 @@ class TunnelRenderer {
     const maxDepth = CONFIG.TUBE_DEPTH_STEPS;
     const normalizedSpeed = clamp((tube.speed || CONFIG.SPEED_START || 1) / Math.max(0.0001, CONFIG.SPEED_START || 1), 0.2, 3);
     const scrollOffset = (tube.scroll || 0) * 0.035 * normalizedSpeed;
+    const ringShift = Math.floor(scrollOffset);
+    const ringPhase = scrollOffset - ringShift;
+    const depthEntries = [];
 
-    for (let depth = maxDepth - 1; depth >= 0; depth -= quality.depthStep) {
-      const animatedDepth = depth + scrollOffset;
+    for (let depth = 0; depth < maxDepth; depth += quality.depthStep) {
+      let animatedDepth = depth - ringPhase;
+      let isSpawnedRing = false;
+      if (animatedDepth < 0) {
+        animatedDepth += maxDepth;
+        isSpawnedRing = true;
+      }
+
+      const tileDepth = ((depth + ringShift) % maxDepth + maxDepth) % maxDepth;
+      depthEntries.push({ animatedDepth, tileDepth, isSpawnedRing });
+    }
+
+    depthEntries.sort((a, b) => b.animatedDepth - a.animatedDepth);
+
+    for (const depthEntry of depthEntries) {
+      const { animatedDepth, tileDepth, isSpawnedRing } = depthEntry;
       const z1 = animatedDepth * CONFIG.TUBE_Z_STEP;
       const z2 = (animatedDepth + quality.depthStep) * CONFIG.TUBE_Z_STEP;
       const scale1 = 1 - z1;
@@ -200,6 +217,7 @@ class TunnelRenderer {
       const bend2 = 1 - scale2;
       const wrappedDepth = ((animatedDepth % maxDepth) + maxDepth) % maxDepth;
       const depthRatio = 1 - wrappedDepth / maxDepth;
+      const spawnBlend = isSpawnedRing ? clamp(ringPhase / 0.35, 0, 1) : 1;
 
       const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
       const seamColor = blendColor(wallColor, 0x9dc7ff, 0.12 + depthRatio * 0.2);
@@ -247,8 +265,8 @@ class TunnelRenderer {
           Math.cos(boundaryA) * radius2 * CONFIG.PLAYER_OFFSET +
           (tube.centerOffsetY || 0) * bend2;
 
-        const tileVariant = getTileVariant(depth, i, Math.floor(scrollOffset));
-        const tileNoise = pseudoRandom(animatedDepth + 17, i + 53);
+        const tileVariant = getTileVariant(tileDepth, i);
+        const tileNoise = pseudoRandom(tileDepth + 17, i + 53);
         const protrusion = 1.2 + depthRatio * 2.2;
 
         let tx1 = x1;
@@ -296,12 +314,12 @@ class TunnelRenderer {
           tileColor = blendColor(wallColor, 0x0f1422, 0.22);
         }
 
-        this.baseGraphics.fillStyle(tileColor, clamp(tileAlpha, 0.2, 1));
+        this.baseGraphics.fillStyle(tileColor, clamp(tileAlpha * spawnBlend, 0.2, 1));
         drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.fillPath();
 
         const tileBorderColor = blendColor(seamColor, 0xdbe9ff, tileVariant === TILE_VARIANTS.smooth ? 0.22 : 0.08);
-        this.baseGraphics.lineStyle(1, tileBorderColor, 0.07 + depthRatio * 0.14);
+        this.baseGraphics.lineStyle(1, tileBorderColor, (0.07 + depthRatio * 0.14) * spawnBlend);
         drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.strokePath();
 

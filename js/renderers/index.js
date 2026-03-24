@@ -1,8 +1,8 @@
 import { assertGameRenderer } from './renderer-contract.js';
-import { createPhaserRendererAdapter } from './phaser-renderer-adapter.js';
-import { getViewportMetrics } from '../phaser/bridge.js';
+import { createCanvasRendererAdapter } from './canvas-renderer-adapter.js';
+import { getCanvasSize } from '../renderer.js';
 
-const DEFAULT_RENDERER = 'phaser';
+const DEFAULT_RENDERER = 'canvas';
 
 function readRequestedRenderer() {
   try {
@@ -15,13 +15,13 @@ function readRequestedRenderer() {
 }
 
 async function createGameRenderer(initialSnapshot) {
-  const renderer = assertGameRenderer(createPhaserRendererAdapter());
+  const renderer = assertGameRenderer(createCanvasRendererAdapter());
   await renderer.init(initialSnapshot);
   return renderer;
 }
 
-function getCanvasSize() {
-  return getViewportMetrics();
+function getCanvasMetrics() {
+  return getCanvasSize();
 }
 
-export { createGameRenderer, getCanvasSize, readRequestedRenderer };
+export { createGameRenderer, getCanvasMetrics as getCanvasSize, readRequestedRenderer };

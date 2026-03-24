@@ -201,6 +201,11 @@ class TunnelRenderer {
 
     const spawnedRingOverlays = [];
     const trackSlatOverlays = [];
+    if (Array.isArray(snapshot?.tubeTiles) && snapshot.tubeTiles.length > 0) {
+      this.drawDynamicTileGrid(centerX, centerY, tube, quality, snapshot.tubeTiles);
+      this.drawMouthRing(centerX, centerY, tube);
+      return;
+    }
 
     for (const depthEntry of depthEntries) {
       const { animatedDepth, isSpawnedRing } = depthEntry;
@@ -355,6 +360,48 @@ class TunnelRenderer {
     }
 
     this.drawMouthRing(centerX, centerY, tube);
+  }
+
+  drawDynamicTileGrid(centerX, centerY, tube, quality, tubeTiles) {
+    const sortedTiles = tubeTiles
+      .filter((tile) => Number.isFinite(tile.z) && Number.isFinite(tile.angle))
+      .sort((a, b) => b.z - a.z);
+
+    for (const tile of sortedTiles) {
+      const z1 = tile.z;
+      const z2 = z1 + (tile.depth || 0.06);
+      const scale1 = 1 - z1;
+      const scale2 = 1 - z2;
+      if (scale2 <= 0 || z1 < -0.2 || z1 > 2.1) continue;
+
+      const innerRadius = CONFIG.TUBE_RADIUS * INNER_RADIUS_RATIO;
+      const radius1 = Math.max(innerRadius, CONFIG.TUBE_RADIUS * scale1);
+      const radius2 = Math.max(innerRadius, CONFIG.TUBE_RADIUS * scale2);
+      const bend1 = 1 - scale1;
+      const bend2 = 1 - scale2;
+      const angleA = tile.angle + tube.rotation + tube.curveAngle;
+      const angleB = angleA + (tile.angleWidth || ((Math.PI * 2) / Math.max(8, CONFIG.TUBE_SEGMENTS)));
+      const depthRatio = clamp(1 - z1 / 2, 0, 1);
+      const segmentMidAngle = (angleA + angleB) * 0.5;
+      const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
+      const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
+      const variantGlow = tile.variant === 1 ? 0.03 : tile.variant === 2 ? 0.06 : 0;
+      const tileFillAlpha = clamp(quality.segmentAlpha + variantGlow, 0.18, 1);
+      const trackWallColor = blendColor(wallColor, 0x7aa3cf, 0.32 * trackCoverage);
+
+      const x1 = centerX + Math.sin(angleA) * radius1 + (tube.centerOffsetX || 0) * bend1;
+      const y1 = centerY + Math.cos(angleA) * radius1 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend1;
+      const x2 = centerX + Math.sin(angleB) * radius1 + (tube.centerOffsetX || 0) * bend1;
+      const y2 = centerY + Math.cos(angleB) * radius1 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend1;
+      const x3 = centerX + Math.sin(angleB) * radius2 + (tube.centerOffsetX || 0) * bend2;
+      const y3 = centerY + Math.cos(angleB) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
+      const x4 = centerX + Math.sin(angleA) * radius2 + (tube.centerOffsetX || 0) * bend2;
+      const y4 = centerY + Math.cos(angleA) * radius2 * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bend2;
+
+      this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
+      drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
+      this.baseGraphics.fillPath();
+    }
   }
 
   drawOverlay() {

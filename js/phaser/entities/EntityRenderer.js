@@ -41,6 +41,8 @@ const OBSTACLE_TEXTURES = {
 
 const FRAME_SIZE = 64;
 const PLAYER_FRAME_SIZE = 128;
+const LAMP_DEPTH_MIN = 0.2;
+const LAMP_DEPTH_MAX = 2.2;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -54,6 +56,14 @@ function clamp(value, min, max) {
 function smoothstep(edge0, edge1, value) {
   const t = clamp((value - edge0) / Math.max(0.0001, edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
+}
+
+function fract(value) {
+  return value - Math.floor(value);
+}
+
+function seededNoise(seed) {
+  return fract(Math.sin(seed * 127.1) * 43758.5453123);
 }
 
 function getPlayerTextureKey(player, runtime) {
@@ -116,6 +126,25 @@ function projectPolar(angle, z, viewport, tube, radiusFactor = 0.65) {
   };
 }
 
+function projectFixedTop(z, viewport, tube, radiusFactor = 1) {
+  const safeZ = clamp(Number.isFinite(z) ? z : 1, 0, 2);
+  const scale = Math.max(0.05, 1 - safeZ);
+  const bendInfluence = 1 - scale;
+  const radius = CONFIG.TUBE_RADIUS * scale * radiusFactor;
+  const topAngle = Math.PI;
+  return {
+    x:
+      viewport.centerX +
+      Math.sin(topAngle) * radius +
+      (tube.centerOffsetX || 0) * bendInfluence,
+    y:
+      viewport.centerY +
+      Math.cos(topAngle) * radius * CONFIG.PLAYER_OFFSET +
+      (tube.centerOffsetY || 0) * bendInfluence,
+    scale,
+  };
+}
+
 function getBonusFrame(item) {
   const frame = item.animFrame || 0;
   switch (item.type) {
@@ -174,6 +203,7 @@ class EntityRenderer {
     this.bonusSprites = [];
     this.obstacleSprites = [];
     this.spinTargetGraphics = [];
+    this.lampGraphics = [];
     this.playerSprite = null;
     this.playerShadow = null;
   }
@@ -200,6 +230,7 @@ class EntityRenderer {
     this.destroyPool(this.bonusSprites);
     this.destroyPool(this.obstacleSprites);
     this.destroyPool(this.spinTargetGraphics);
+    this.destroyPool(this.lampGraphics);
     this.playerSprite?.destroy();
     this.playerShadow?.destroy();
     this.root?.destroy();
@@ -221,6 +252,7 @@ class EntityRenderer {
     this.renderObjects();
     this.renderPlayer();
     this.renderSpinTargets();
+    this.renderLamps();
   }
 
   renderPlayer() {
@@ -364,6 +396,80 @@ class EntityRenderer {
     for (let index = targets.length; index < this.spinTargetGraphics.length; index += 1) {
       this.spinTargetGraphics[index].clear();
       this.spinTargetGraphics[index].setVisible(false);
+    }
+  }
+
+  renderLamps() {
+    const lamps = (this.snapshot?.lamps || []).filter((item) => item.z > -0.2 && item.z < 2);
+    const viewport = this.snapshot?.viewport;
+    const tube = this.snapshot?.tube;
+    if (!viewport || !tube) return;
+    this.ensurePoolSize(this.lampGraphics, lamps.length, () => this.scene.add.graphics());
+
+    lamps.forEach((lamp, index) => {
+      const graphics = this.lampGraphics[index];
+      const projection = projectFixedTop(lamp.z, viewport, tube, lamp.radiusFactor || 1);
+      const depthRatio = clamp(1 - lamp.z / LAMP_DEPTH_MAX, 0, 1);
+      const lampScale = projection.scale;
+      const lampSeed = (lamp.index || index) * 1.13 + 7.1;
+      const faultChance = seededNoise(lampSeed);
+      const flickerChance = seededNoise(lampSeed + 17.3);
+      const brightnessSeed = seededNoise(lampSeed + 41.9);
+      const animationTime = (tube.scroll || 0) * 0.02 + (this.snapshot?.runtime?.distance || 0) * 0.006;
+      const isBroken = faultChance < 0.16;
+      const isFlickering = !isBroken && flickerChance < 0.28;
+      const baseIntensity = 0.55 + brightnessSeed * 0.95;
+      let intensity = baseIntensity;
+      if (isBroken) {
+        intensity = 0;
+      } else if (isFlickering) {
+        const flickerWave = 0.45 + Math.sin(animationTime * 19 + lampSeed * 5.3) * 0.55;
+        const flutter = Math.sin(animationTime * 53 + lampSeed * 21.7) > 0.68 ? 0.15 : 1;
+        intensity *= flickerWave * flutter;
+      }
+      intensity = clamp(intensity, 0, 1.45);
+
+      const lampBodyWidth = clamp(11 * lampScale + 2.4, 2.6, 15);
+      const lampBodyHeight = clamp(7 * lampScale + 1.8, 2.2, 9.5);
+      const lampBodyColor = isBroken ? 0x3a4659 : 0x7e96b0;
+      const supportY = projection.y - lampBodyHeight * 0.9;
+      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.16 + intensity * 0.05), 10, 62);
+      const glowY = projection.y + glowRadius * 0.28;
+      const glowAlpha = clamp((0.08 + intensity * 0.18) * depthRatio, 0, 0.42);
+
+      graphics.clear();
+      graphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);
+      graphics.beginPath();
+      graphics.moveTo(projection.x, supportY);
+      graphics.lineTo(projection.x, projection.y - lampBodyHeight * 0.2);
+      graphics.strokePath();
+      graphics.fillStyle(lampBodyColor, 0.7 + depthRatio * 0.24);
+      graphics.fillEllipse(projection.x, projection.y, lampBodyWidth, lampBodyHeight);
+
+      if (intensity > 0.01) {
+        graphics.fillStyle(intensity > 1.05 ? 0xe8f2ff : 0xb6d2f0, glowAlpha);
+        graphics.fillEllipse(
+          projection.x,
+          glowY,
+          glowRadius,
+          glowRadius * 0.46 * CONFIG.PLAYER_OFFSET,
+        );
+        const coreAlpha = clamp((0.18 + intensity * 0.28) * depthRatio, 0, 0.55);
+        graphics.fillStyle(0xf6fbff, coreAlpha);
+        graphics.fillCircle(
+          projection.x,
+          projection.y,
+          clamp(2.6 * lampScale + intensity * 1.9, 1.1, 5.2),
+        );
+      }
+
+      graphics.setVisible(lamp.z >= LAMP_DEPTH_MIN);
+      this.targetLayer.add(graphics);
+    });
+
+    for (let index = lamps.length; index < this.lampGraphics.length; index += 1) {
+      this.lampGraphics[index].clear();
+      this.lampGraphics[index].setVisible(false);
     }
   }
 }

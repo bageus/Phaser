@@ -1,6 +1,12 @@
 import { CONFIG } from './config.js';
 import { gameState, player, obstacles, bonuses, coins, spinTargets, tubeTiles } from './state.js';
 
+const LAMP_SPACING_METERS = 30;
+const LAMP_VISIBLE_COUNT = 9;
+const LAMP_Z_SPACING = 0.22;
+const LAMP_NEAR_Z = 0.2;
+const LAMP_TOP_ANGLE = Math.PI;
+
 /**
  * @typedef {'canvas'|'phaser'} RenderBackend
  */
@@ -78,6 +84,25 @@ export function createRenderSnapshot(viewport) {
   const height = Number.isFinite(viewport?.height) ? viewport.height : 0;
   const dpr = Number.isFinite(viewport?.dpr) ? viewport.dpr : Math.min(window.devicePixelRatio || 1, 3);
 
+  const lamps = [];
+  const distance = gameState.distance || 0;
+  const metersPhase = ((distance % LAMP_SPACING_METERS) + LAMP_SPACING_METERS) % LAMP_SPACING_METERS;
+  const metersToNextLamp = LAMP_SPACING_METERS - metersPhase;
+
+  for (let lampOrder = 0; lampOrder < LAMP_VISIBLE_COUNT; lampOrder += 1) {
+    const lampDistanceMeters = metersToNextLamp + lampOrder * LAMP_SPACING_METERS;
+    const lampDepthUnits = lampDistanceMeters / LAMP_SPACING_METERS;
+    const lampZ = LAMP_NEAR_Z + lampDepthUnits * LAMP_Z_SPACING;
+    if (lampZ >= 2) continue;
+    const lampIndex = Math.floor((distance + lampDistanceMeters) / LAMP_SPACING_METERS);
+    lamps.push({
+      z: lampZ,
+      angle: LAMP_TOP_ANGLE,
+      radiusFactor: 1,
+      index: lampIndex,
+    });
+  }
+
   return {
     schemaVersion: 1,
     backend: /** @type {RenderBackend} */ ('phaser'),
@@ -153,6 +178,7 @@ export function createRenderSnapshot(viewport) {
       collected: Boolean(item.collected),
       kind: item.kind ?? 'spin'
     })),
+    lamps,
     tubeTiles: tubeTiles.map((tile) => ({
       angle: tile.angle ?? 0,
       z: tile.z ?? 0,

@@ -1,9 +1,9 @@
 import { CONFIG } from './config.js';
 import { gameState, player, obstacles, bonuses, coins, spinTargets, tubeTiles } from './state.js';
 
-const LAMP_SPACING_METERS = 30;
-const LAMP_VISIBLE_COUNT = 9;
-const LAMP_Z_SPACING = 0.22;
+const LAMP_SPACING_METERS = 10;
+const LAMP_VISIBLE_COUNT = 2;
+const LAMP_Z_SPACING = (LAMP_SPACING_METERS * CONFIG.SPEED_START * 16) / (300 * CONFIG.SPEED_START);
 const LAMP_NEAR_Z = 0.2;
 const LAMP_TOP_ANGLE = Math.PI;
 

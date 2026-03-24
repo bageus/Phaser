@@ -43,7 +43,7 @@ const FRAME_SIZE = 64;
 const PLAYER_FRAME_SIZE = 128;
 const LAMP_DEPTH_MIN = 0.2;
 const LAMP_DEPTH_MAX = 2.2;
-const LAMP_LIGHT_BOOST = 20;
+const LAMP_LIGHT_BOOST = 10;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;

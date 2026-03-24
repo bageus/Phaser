@@ -476,17 +476,16 @@ class TunnelRenderer {
 
     // Общий объём: подсветка и тень как полосы внутри той же геометрии плитки.
     // Это убирает эффект «висящих» эллипсов, оторванных от поверхности.
-    const topGlowBandOuter = getQuadBand(quad, 0.04, 0.36);
-    const topGlowBandInner = getQuadBand(quad, 0.1, 0.29);
-    const centerBlendBand = getQuadBand(quad, 0.28, 0.62);
+    const topGlowBandOuter = getQuadBand(quad, 0.08, 0.3);
+    const centerBlendBand = getQuadBand(quad, 0.26, 0.62);
     const bottomShadeBandOuter = getQuadBand(quad, 0.58, 0.94);
     const bottomShadeBandInner = getQuadBand(quad, 0.66, 0.9);
 
-    this.lightGraphics.fillStyle(blendColor(0x6f95bc, 0xd8ebff, depthRatio * 0.52), detailAlpha * 0.36);
+    // Снижаем контраст продольной подсветки: убираем яркую внутреннюю полосу,
+    // из-за которой между кольцами плиток читались светлые горизонтальные швы.
+    this.lightGraphics.fillStyle(blendColor(0x5a7da1, 0xb9d5ef, depthRatio * 0.42), detailAlpha * 0.12);
     fillQuad(this.lightGraphics, topGlowBandOuter);
-    this.lightGraphics.fillStyle(blendColor(0x8fb5da, 0xe7f3ff, depthRatio * 0.56), detailAlpha * 0.32);
-    fillQuad(this.lightGraphics, topGlowBandInner);
-    this.lightGraphics.fillStyle(blendColor(0x0f1b2b, 0x2a3f58, depthRatio * 0.34), detailAlpha * 0.12);
+    this.lightGraphics.fillStyle(blendColor(0x0f1b2b, 0x2a3f58, depthRatio * 0.34), detailAlpha * 0.1);
     fillQuad(this.lightGraphics, centerBlendBand);
     this.lightGraphics.fillStyle(blendColor(0x03060d, 0x112033, depthRatio * 0.45), detailAlpha * 0.34);
     fillQuad(this.lightGraphics, bottomShadeBandOuter);

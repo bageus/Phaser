@@ -435,9 +435,9 @@ class EntityRenderer {
       const lampBodyColor = isBroken ? 0x3a4659 : 0x7e96b0;
       const supportY = projection.y - lampBodyHeight * 0.9;
       const boostedIntensity = intensity * LAMP_LIGHT_BOOST;
-      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.2 + boostedIntensity * 0.07), 14, 420);
-      const glowY = projection.y + glowRadius * 0.36;
-      const glowAlpha = clamp((0.14 + boostedIntensity * 0.26) * depthRatio, 0, 0.6);
+      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.1 + boostedIntensity * 0.035), 9, 210);
+      const glowY = projection.y + glowRadius * 0.28;
+      const glowAlpha = clamp((0.05 + boostedIntensity * 0.12) * depthRatio, 0, 0.28);
 
       graphics.clear();
       graphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);
@@ -449,18 +449,18 @@ class EntityRenderer {
       graphics.fillEllipse(projection.x, projection.y, lampBodyWidth, lampBodyHeight);
 
       if (intensity > 0.01) {
-        graphics.fillStyle(intensity > 1.05 ? 0xe8f2ff : 0xb6d2f0, glowAlpha);
-        graphics.fillEllipse(
-          projection.x,
-          glowY,
-          glowRadius,
-          glowRadius * 0.46 * CONFIG.PLAYER_OFFSET,
-        );
+        const glowColor = intensity > 1.05 ? 0xe8f2ff : 0xb6d2f0;
+        graphics.fillStyle(glowColor, glowAlpha * 0.45);
+        graphics.fillEllipse(projection.x, glowY, glowRadius * 1.25, glowRadius * 0.52 * CONFIG.PLAYER_OFFSET);
+        graphics.fillStyle(glowColor, glowAlpha * 0.8);
+        graphics.fillEllipse(projection.x, glowY, glowRadius * 0.9, glowRadius * 0.36 * CONFIG.PLAYER_OFFSET);
+        graphics.fillStyle(glowColor, glowAlpha);
+        graphics.fillEllipse(projection.x, glowY, glowRadius * 0.6, glowRadius * 0.22 * CONFIG.PLAYER_OFFSET);
         const shaftLength = clamp(glowRadius * 2.2 * CONFIG.PLAYER_OFFSET, 18, 360);
         const shaftBottomY = projection.y + shaftLength;
         const shaftCoreWidth = clamp(glowRadius * 0.45, 7, 140);
         const shaftEdgeWidth = clamp(glowRadius * 1.45, 20, 320);
-        const shaftAlphaBase = clamp((0.05 + boostedIntensity * 0.12) * depthRatio, 0, 1);
+        const shaftAlphaBase = clamp((0.04 + boostedIntensity * 0.09) * depthRatio, 0, 0.42);
 
         for (let pass = 0; pass < 4; pass += 1) {
           const passRatio = pass / 3;
@@ -472,7 +472,7 @@ class EntityRenderer {
           graphics.fillEllipse(projection.x, beamY, beamWidth, beamHeight);
         }
 
-        const shaftFadeAlpha = clamp((0.04 + boostedIntensity * 0.08) * depthRatio, 0, 0.95);
+        const shaftFadeAlpha = clamp((0.03 + boostedIntensity * 0.06) * depthRatio, 0, 0.38);
         graphics.fillStyle(0x9bc9f2, shaftFadeAlpha);
         graphics.fillEllipse(
           projection.x,
@@ -482,9 +482,9 @@ class EntityRenderer {
         );
 
         const pipeLightY = projection.y + glowRadius * 1.08;
-        const pipeLightWidth = clamp(glowRadius * 1.9, 20, 360);
-        const pipeLightHeight = clamp(glowRadius * 0.86 * CONFIG.PLAYER_OFFSET, 8, 190);
-        const pipeLightAlpha = clamp((0.08 + boostedIntensity * 0.2) * depthRatio, 0, 1);
+        const pipeLightWidth = clamp(glowRadius * 1.35, 14, 220);
+        const pipeLightHeight = clamp(glowRadius * 0.54 * CONFIG.PLAYER_OFFSET, 5, 110);
+        const pipeLightAlpha = clamp((0.04 + boostedIntensity * 0.11) * depthRatio, 0, 0.32);
         graphics.fillStyle(0xaed7ff, pipeLightAlpha);
         graphics.fillEllipse(
           projection.x,
@@ -492,7 +492,7 @@ class EntityRenderer {
           pipeLightWidth,
           pipeLightHeight,
         );
-        const coreAlpha = clamp((0.18 + boostedIntensity * 0.28) * depthRatio, 0, 1);
+        const coreAlpha = clamp((0.1 + boostedIntensity * 0.2) * depthRatio, 0, 0.62);
         graphics.fillStyle(0xf6fbff, coreAlpha);
         graphics.fillCircle(
           projection.x,

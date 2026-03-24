@@ -202,6 +202,8 @@ class TunnelRenderer {
 
     depthEntries.sort((a, b) => b.animatedDepth - a.animatedDepth);
 
+    const spawnedRingOverlays = [];
+
     for (const depthEntry of depthEntries) {
       const { animatedDepth, tileDepth, isSpawnedRing } = depthEntry;
       const z1 = animatedDepth * CONFIG.TUBE_Z_STEP;
@@ -314,7 +316,8 @@ class TunnelRenderer {
           tileColor = blendColor(wallColor, 0x0f1422, 0.22);
         }
 
-        this.baseGraphics.fillStyle(tileColor, clamp(tileAlpha * spawnBlend, 0.2, 1));
+        const tileFillAlpha = clamp(tileAlpha * spawnBlend, 0.2, 1);
+        this.baseGraphics.fillStyle(tileColor, tileFillAlpha);
         drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.fillPath();
 
@@ -322,6 +325,22 @@ class TunnelRenderer {
         this.baseGraphics.lineStyle(1, tileBorderColor, (0.07 + depthRatio * 0.14) * spawnBlend);
         drawQuadPath(this.baseGraphics, tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4);
         this.baseGraphics.strokePath();
+
+        if (isSpawnedRing) {
+          spawnedRingOverlays.push({
+            tx1,
+            ty1,
+            tx2,
+            ty2,
+            tx3,
+            ty3,
+            tx4,
+            ty4,
+            depthRatio,
+            spawnBlend,
+            tileFillAlpha,
+          });
+        }
 
         if (tileVariant === TILE_VARIANTS.cracked) {
           const crackX1 = (tx1 + tx2) * 0.5;
@@ -345,6 +364,38 @@ class TunnelRenderer {
           this.baseGraphics.fillCircle(roughX, roughY, 0.7 + depthRatio * 1.1);
         }
       }
+    }
+
+    for (const overlay of spawnedRingOverlays) {
+      const overlayAlpha = clamp((0.18 + overlay.depthRatio * 0.2) * overlay.spawnBlend, 0, 0.34);
+      const overlayColor = blendColor(0x78b8ff, 0xffffff, overlay.depthRatio * 0.3);
+      this.lightGraphics.fillStyle(overlayColor, overlayAlpha);
+      drawQuadPath(
+        this.lightGraphics,
+        overlay.tx1,
+        overlay.ty1,
+        overlay.tx2,
+        overlay.ty2,
+        overlay.tx3,
+        overlay.ty3,
+        overlay.tx4,
+        overlay.ty4,
+      );
+      this.lightGraphics.fillPath();
+
+      this.lightGraphics.lineStyle(1, 0xd7ebff, clamp(overlay.tileFillAlpha * 0.45, 0.08, 0.38));
+      drawQuadPath(
+        this.lightGraphics,
+        overlay.tx1,
+        overlay.ty1,
+        overlay.tx2,
+        overlay.ty2,
+        overlay.tx3,
+        overlay.ty3,
+        overlay.tx4,
+        overlay.ty4,
+      );
+      this.lightGraphics.strokePath();
     }
 
     this.drawMouthRing(centerX, centerY, tube);

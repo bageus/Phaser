@@ -43,7 +43,6 @@ const FRAME_SIZE = 64;
 const PLAYER_FRAME_SIZE = 128;
 const LAMP_DEPTH_MIN = 0.2;
 const LAMP_DEPTH_MAX = 2.2;
-const LAMP_LIGHT_BOOST = 10;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -433,73 +432,16 @@ class EntityRenderer {
       const lampBodyWidth = clamp(11 * lampScale + 2.4, 2.6, 15);
       const lampBodyHeight = clamp(7 * lampScale + 1.8, 2.2, 9.5);
       const lampBodyColor = isBroken ? 0x3a4659 : 0x7e96b0;
+      const lampBodyAlpha = clamp(0.45 + depthRatio * 0.2 + intensity * 0.12, 0.35, 0.9);
       const supportY = projection.y - lampBodyHeight * 0.9;
-      const boostedIntensity = intensity * LAMP_LIGHT_BOOST;
-      const glowRadius = clamp(CONFIG.TUBE_RADIUS * lampScale * (0.1 + boostedIntensity * 0.035), 9, 210);
-      const glowY = projection.y + glowRadius * 0.28;
-      const glowAlpha = clamp((0.05 + boostedIntensity * 0.12) * depthRatio, 0, 0.28);
-
       graphics.clear();
       graphics.lineStyle(1, 0x2a3548, 0.5 * depthRatio + 0.2);
       graphics.beginPath();
       graphics.moveTo(projection.x, supportY);
       graphics.lineTo(projection.x, projection.y - lampBodyHeight * 0.2);
       graphics.strokePath();
-      graphics.fillStyle(lampBodyColor, 0.7 + depthRatio * 0.24);
+      graphics.fillStyle(lampBodyColor, lampBodyAlpha);
       graphics.fillEllipse(projection.x, projection.y, lampBodyWidth, lampBodyHeight);
-
-      if (intensity > 0.01) {
-        const glowColor = intensity > 1.05 ? 0xe8f2ff : 0xb6d2f0;
-        graphics.fillStyle(glowColor, glowAlpha * 0.45);
-        graphics.fillEllipse(projection.x, glowY, glowRadius * 1.25, glowRadius * 0.52 * CONFIG.PLAYER_OFFSET);
-        graphics.fillStyle(glowColor, glowAlpha * 0.8);
-        graphics.fillEllipse(projection.x, glowY, glowRadius * 0.9, glowRadius * 0.36 * CONFIG.PLAYER_OFFSET);
-        graphics.fillStyle(glowColor, glowAlpha);
-        graphics.fillEllipse(projection.x, glowY, glowRadius * 0.6, glowRadius * 0.22 * CONFIG.PLAYER_OFFSET);
-        const shaftLength = clamp(glowRadius * 2.2 * CONFIG.PLAYER_OFFSET, 18, 360);
-        const shaftBottomY = projection.y + shaftLength;
-        const shaftCoreWidth = clamp(glowRadius * 0.45, 7, 140);
-        const shaftEdgeWidth = clamp(glowRadius * 1.45, 20, 320);
-        const shaftAlphaBase = clamp((0.04 + boostedIntensity * 0.09) * depthRatio, 0, 0.42);
-
-        for (let pass = 0; pass < 4; pass += 1) {
-          const passRatio = pass / 3;
-          const beamY = projection.y + shaftLength * (0.2 + passRatio * 0.62);
-          const beamWidth = shaftCoreWidth + (shaftEdgeWidth - shaftCoreWidth) * passRatio;
-          const beamHeight = clamp(glowRadius * (0.14 + passRatio * 0.13), 3, 20);
-          const beamAlpha = shaftAlphaBase * (1 - passRatio * 0.58);
-          graphics.fillStyle(0xbfe1ff, beamAlpha);
-          graphics.fillEllipse(projection.x, beamY, beamWidth, beamHeight);
-        }
-
-        const shaftFadeAlpha = clamp((0.03 + boostedIntensity * 0.06) * depthRatio, 0, 0.38);
-        graphics.fillStyle(0x9bc9f2, shaftFadeAlpha);
-        graphics.fillEllipse(
-          projection.x,
-          (projection.y + shaftBottomY) * 0.5,
-          shaftEdgeWidth,
-          shaftLength,
-        );
-
-        const pipeLightY = projection.y + glowRadius * 1.08;
-        const pipeLightWidth = clamp(glowRadius * 1.35, 14, 220);
-        const pipeLightHeight = clamp(glowRadius * 0.54 * CONFIG.PLAYER_OFFSET, 5, 110);
-        const pipeLightAlpha = clamp((0.04 + boostedIntensity * 0.11) * depthRatio, 0, 0.32);
-        graphics.fillStyle(0xaed7ff, pipeLightAlpha);
-        graphics.fillEllipse(
-          projection.x,
-          pipeLightY,
-          pipeLightWidth,
-          pipeLightHeight,
-        );
-        const coreAlpha = clamp((0.1 + boostedIntensity * 0.2) * depthRatio, 0, 0.62);
-        graphics.fillStyle(0xf6fbff, coreAlpha);
-        graphics.fillCircle(
-          projection.x,
-          projection.y,
-          clamp(2.6 * lampScale + intensity * 1.9, 1.1, 5.2),
-        );
-      }
 
       graphics.setVisible(lamp.z >= LAMP_DEPTH_MIN);
       this.targetLayer.add(graphics);

@@ -231,17 +231,30 @@ class TunnelRenderer {
     const scrollOffset = (tube.scroll || 0) * 0.035 * normalizedSpeed;
     const ringShift = Math.floor(scrollOffset);
     const ringPhase = scrollOffset - ringShift;
+    const lampDepthSteps = Array.isArray(snapshot?.lamps)
+      ? snapshot.lamps
+        .map((lamp) => (Number.isFinite(lamp?.z) ? lamp.z / CONFIG.TUBE_Z_STEP : NaN))
+        .filter((lampDepthStep) => Number.isFinite(lampDepthStep))
+      : [];
+    const lampPulseHalfWidth = Math.max(quality.depthStep * 1.5, 0.9);
     const depthEntries = [];
 
     for (let depth = 0; depth < maxDepth; depth += quality.depthStep) {
       let animatedDepth = depth - ringPhase;
-      let isSpawnedRing = false;
       if (animatedDepth < 0) {
         animatedDepth += maxDepth;
-        isSpawnedRing = true;
       }
 
-      depthEntries.push({ animatedDepth, isSpawnedRing });
+      let spawnBlend = 0;
+      for (const lampDepthStep of lampDepthSteps) {
+        const lampDistance = Math.abs(animatedDepth - lampDepthStep);
+        const lampBlend = 1 - clamp(lampDistance / lampPulseHalfWidth, 0, 1);
+        if (lampBlend > spawnBlend) {
+          spawnBlend = lampBlend;
+        }
+      }
+
+      depthEntries.push({ animatedDepth, spawnBlend });
     }
 
     depthEntries.sort((a, b) => b.animatedDepth - a.animatedDepth);
@@ -256,7 +269,7 @@ class TunnelRenderer {
     }
 
     for (const depthEntry of depthEntries) {
-      const { animatedDepth, isSpawnedRing } = depthEntry;
+      const { animatedDepth, spawnBlend } = depthEntry;
       const z1 = animatedDepth * CONFIG.TUBE_Z_STEP;
       const z2 = (animatedDepth + quality.depthStep) * CONFIG.TUBE_Z_STEP;
       const scale1 = 1 - z1;
@@ -270,11 +283,6 @@ class TunnelRenderer {
       const bend2 = 1 - scale2;
       const wrappedDepth = ((animatedDepth % maxDepth) + maxDepth) % maxDepth;
       const depthRatio = 1 - wrappedDepth / maxDepth;
-      // Ранее для "нового" кольца применялось плавное проявление через alpha.
-      // На некоторых кадрах это создавало полностью тёмный пояс по периметру трубы.
-      // Оставляем кольца равномерно непрозрачными, чтобы исключить артефакт.
-      const spawnBlend = 1;
-
       const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
       for (let i = 0; i < segmentCount; i += quality.segmentStep) {
         const boundaryA =
@@ -348,7 +356,7 @@ class TunnelRenderer {
           }
         }
 
-        if (isSpawnedRing) {
+        if (spawnBlend > 0.01) {
           spawnedRingOverlays.push({
             x1,
             y1,

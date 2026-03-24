@@ -8,12 +8,12 @@ const TRACK_EDGE_SOFTNESS = 0.12;
 const TRACK_SLAT_PERIOD = 2.9;
 const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
-const LAMP_BRIGHTNESS_MULTIPLIER = 10;
-const NEON_PULSE_SPEED = 0.0008;
-const NEON_PULSE_MIN = 0.25;
-const NEON_PULSE_MAX = 0.85;
-const NEON_PURPLE_BASE = 0x7a1cff;
-const NEON_PURPLE_PEAK = 0xff4dff;
+const LAMP_BRIGHTNESS_MULTIPLIER = 100;
+const NEON_PULSE_SPEED = 0.00018;
+const NEON_PULSE_MIN = 0.0;
+const NEON_PULSE_MAX = 0.14;
+const NEON_PURPLE_BASE = 0x32005f;
+const NEON_PURPLE_PEAK = 0xa73df2;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -542,7 +542,7 @@ class TunnelRenderer {
     const pulseWave = Math.sin(pulseTime * NEON_PULSE_SPEED + phaseSeed) * 0.5 + 0.5;
     const neonAlpha = lerp(NEON_PULSE_MIN, NEON_PULSE_MAX, pulseWave);
     const neonColor = blendColor(NEON_PURPLE_BASE, NEON_PURPLE_PEAK, pulseWave);
-    this.lightGraphics.lineStyle(2, neonColor, neonAlpha);
+    this.lightGraphics.lineStyle(0.8, neonColor, neonAlpha);
     drawQuadPath(
       this.lightGraphics,
       quad.p1.x,

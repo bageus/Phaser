@@ -12,11 +12,12 @@ const TUBE_TILE_RING_COUNT = 18;
 const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
 const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
-const TUBE_TILE_VARIANT_COUNT = 5;
+const TUBE_TILE_VARIANT_COUNT = 4;
 const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
 
 function getDeterministicTileVariant(ring, segment) {
-  // Шаблон 2x2 сохраняет повторяемую сетку и убирает "шум" от случайного выбора.
+  // Ограничиваем набор вариантов, чтобы убрать периодически появляющееся
+  // самое тёмное кольцо между циклами спавна плиток.
   return (ring + segment) % TUBE_TILE_VARIANT_COUNT;
 }
 

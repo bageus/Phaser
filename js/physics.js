@@ -11,6 +11,7 @@ let laneCooldown = getLaneCooldown();
 const TUBE_TILE_RING_COUNT = 18;
 const TUBE_TILE_Z_STEP = 0.06;
 const TUBE_TILE_NEAR_Z = 0.18;
+const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
 const TUBE_TILE_VARIANT_COUNT = 5;
 const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
 
@@ -431,18 +432,10 @@ function update(delta) {
   const speedGrowthRatio = Math.max(gameState.speed / Math.max(CONFIG.SPEED_START, 0.0001), 0.15);
   const tubeTileScrollDelta = TUBE_TILE_SCROLL_BASE_PER_SECOND * speedGrowthRatio * delta;
 
-  let farthestTileZ = -Infinity;
   for (const tile of tubeTiles) {
     tile.z -= tubeTileScrollDelta;
-    if (tile.z > farthestTileZ) {
-      farthestTileZ = tile.z;
-    }
-  }
-
-  for (const tile of tubeTiles) {
     if (tile.z <= -0.1) {
-      tile.z = farthestTileZ + TUBE_TILE_Z_STEP;
-      farthestTileZ = tile.z;
+      tile.z += TUBE_TILE_FAR_Z;
     }
   }
 

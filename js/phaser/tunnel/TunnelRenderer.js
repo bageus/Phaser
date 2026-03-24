@@ -67,21 +67,13 @@ function normalizeAngleDiff(diff) {
 }
 
 function getTrackCoverage(angle, tubeRotation, curveAngle) {
-  const segmentAngle = angle - tubeRotation - curveAngle;
-  let strongestCoverage = 0;
-
-  for (const lane of TRACK_LANE_CENTERS) {
-    const laneAngle = lane * LANE_ANGLE_STEP;
-    const diff = Math.abs(normalizeAngleDiff(segmentAngle - laneAngle));
-    if (diff > TRACK_BAND_HALF_WIDTH + TRACK_EDGE_SOFTNESS) {
-      continue;
-    }
-
-    const localCoverage = 1 - clamp((diff - TRACK_BAND_HALF_WIDTH) / TRACK_EDGE_SOFTNESS, 0, 1);
-    strongestCoverage = Math.max(strongestCoverage, localCoverage);
-  }
-
-  return strongestCoverage;
+  // Пользовательский запрос: убрать «бегущую» светлую полосу в трубе.
+  // Возвращаем 0, чтобы отключить динамическое высветление дорожек
+  // и сделать затемнение по окружности равномерным.
+  void angle;
+  void tubeRotation;
+  void curveAngle;
+  return 0;
 }
 
 class TunnelRenderer {

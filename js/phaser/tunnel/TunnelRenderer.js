@@ -13,8 +13,8 @@ const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
-const TILE_OVERDRAW_PX = 1.2;
-const SINGLE_TUNNEL_TILE_FRAME = 0;
+const TILE_OVERDRAW_PX = 2;
+const TUNNEL_TILE_FRAME_COUNT = 16;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -478,12 +478,13 @@ class TunnelRenderer {
     const pCenter = lerpPoint(pTopMid, pBottomMid, 0.5);
     const tileWidth = Math.hypot(quad.p1.x - quad.p2.x, quad.p1.y - quad.p2.y);
     const tileHeight = Math.hypot(quad.p1.x - quad.p4.x, quad.p1.y - quad.p4.y);
-    void variant;
     void tile;
+    const frameIndex = Number.isFinite(variant) ? Math.abs(Math.trunc(variant)) % TUNNEL_TILE_FRAME_COUNT : 0;
+    const frameName = `tile_${String(frameIndex).padStart(2, '0')}`;
     const textureSprite = this.acquireTileSprite(spriteIndex);
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
-      .setFrame(SINGLE_TUNNEL_TILE_FRAME)
+      .setFrame(frameName)
       .setDisplaySize(Math.max(2, tileWidth + TILE_OVERDRAW_PX), Math.max(2, tileHeight + TILE_OVERDRAW_PX))
       .setRotation(0)
       .setFlipX(false)

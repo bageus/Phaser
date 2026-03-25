@@ -1,3 +1,9 @@
+const BASE_URL = import.meta.env.BASE_URL || '/';
+
+function resolveAssetPath(relativePath) {
+  return new URL(relativePath, window.location.origin + BASE_URL).toString();
+}
+
 function createTunnelSceneClass(Phaser) {
   return class PhaserTunnelScene extends Phaser.Scene {
     constructor() {
@@ -6,18 +12,18 @@ function createTunnelSceneClass(Phaser) {
     }
 
     preload() {
-      this.load.image('ring_emissive', '/img/ring_emissive.webp');
-      this.load.image('tunnel_tile', '/img/tunnel_tile.webp');
-      this.load.image('metal_ring', '/img/metal_ring.webp');
-      this.load.image('tunnel_gradient', '/img/tunnel_gradient.webp');
+      this.load.image('ring_emissive', resolveAssetPath('img/ring_emissive.webp'));
+      this.load.image('tunnel_tile', resolveAssetPath('img/tunnel_tile.webp'));
+      this.load.image('metal_ring', resolveAssetPath('img/metal_ring.webp'));
+      this.load.image('tunnel_gradient', resolveAssetPath('img/tunnel_gradient.webp'));
 
-      this.load.image('core_void', '/img/generated/core_void.svg');
-      this.load.image('core_glow', '/img/generated/core_glow.svg');
-      this.load.image('light_streak_1', '/img/generated/light_streak_1.svg');
-      this.load.image('light_streak_2', '/img/generated/light_streak_2.svg');
-      this.load.image('dust_particle', '/img/generated/dust_particle.svg');
-      this.load.image('lens_dirt', '/img/generated/lens_dirt.svg');
-      this.load.image('rim_scratch', '/img/generated/rim_scratch.svg');
+      this.load.image('core_void', resolveAssetPath('img/generated/core_void.svg'));
+      this.load.image('core_glow', resolveAssetPath('img/generated/core_glow.svg'));
+      this.load.image('light_streak_1', resolveAssetPath('img/generated/light_streak_1.svg'));
+      this.load.image('light_streak_2', resolveAssetPath('img/generated/light_streak_2.svg'));
+      this.load.image('dust_particle', resolveAssetPath('img/generated/dust_particle.svg'));
+      this.load.image('lens_dirt', resolveAssetPath('img/generated/lens_dirt.svg'));
+      this.load.image('rim_scratch', resolveAssetPath('img/generated/rim_scratch.svg'));
     }
 
     create() {

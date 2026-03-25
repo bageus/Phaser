@@ -5,6 +5,38 @@ function createPhaserRendererAdapter() {
   let game = null;
   let tunnelScene = null;
 
+  function attachAssetLoadDiagnostics(Phaser, phaserGame) {
+    const fileErrorEvent = Phaser.Loader?.Events?.FILE_LOAD_ERROR || 'loaderror';
+    phaserGame.events.once(Phaser.Core.Events.READY, () => {
+      const scene = phaserGame.scene.getScene('TunnelScene');
+      const loader = scene?.load;
+      if (!loader?.on) return;
+
+      loader.on(fileErrorEvent, (file) => {
+        console.warn('⚠️ Phaser asset failed to load', file?.key, file?.src || file?.url);
+      });
+    });
+  }
+
+  function bindTunnelScene(Phaser, phaserGame, initialSnapshot) {
+    return new Promise((resolve) => {
+      const assignScene = () => {
+        tunnelScene = phaserGame.scene.getScene('TunnelScene');
+        if (tunnelScene?.applySnapshot) {
+          tunnelScene.applySnapshot(initialSnapshot);
+        }
+        resolve();
+      };
+
+      if (phaserGame.scene.getScene('TunnelScene')) {
+        assignScene();
+        return;
+      }
+
+      phaserGame.events.once(Phaser.Core.Events.READY, assignScene);
+    });
+  }
+
   function getHostElement() {
     return document.getElementById('gameViewport');
   }
@@ -41,10 +73,8 @@ function createPhaserRendererAdapter() {
         scene: [TunnelSceneClass]
       });
 
-      tunnelScene = game.scene.keys.TunnelScene;
-      if (tunnelScene?.applySnapshot) {
-        tunnelScene.applySnapshot(initialSnapshot);
-      }
+      attachAssetLoadDiagnostics(Phaser, game);
+      await bindTunnelScene(Phaser, game, initialSnapshot);
 
       return true;
     },

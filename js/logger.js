@@ -24,6 +24,22 @@ const normalizeLevel = (value) => {
 let initialized = false;
 let currentLevel = 'warn';
 
+function safeGetStoredLevel() {
+  try {
+    return localStorage.getItem('ursass.logLevel');
+  } catch {
+    return null;
+  }
+}
+
+function safeSetStoredLevel(level) {
+  try {
+    localStorage.setItem('ursass.logLevel', level);
+  } catch {
+    // Ignore storage restrictions (private mode / embedded webviews).
+  }
+}
+
 const logger = {
   getLevel() {
     return currentLevel;
@@ -35,7 +51,7 @@ const logger = {
       return currentLevel;
     }
     currentLevel = normalized;
-    localStorage.setItem('ursass.logLevel', normalized);
+    safeSetStoredLevel(normalized);
     originalConsole.info(`🔧 Log level set to: ${normalized}`);
     return currentLevel;
   },
@@ -62,11 +78,11 @@ function initLogger() {
 
   const params = new URLSearchParams(window.location.search);
   const queryLevel = normalizeLevel(params.get('logLevel'));
-  const localStorageLevel = normalizeLevel(localStorage.getItem('ursass.logLevel'));
+  const localStorageLevel = normalizeLevel(safeGetStoredLevel());
   currentLevel = queryLevel || localStorageLevel || defaultLevel;
 
   if (queryLevel) {
-    localStorage.setItem('ursass.logLevel', queryLevel);
+    safeSetStoredLevel(queryLevel);
   }
 
   window.LOG_LEVELS = Object.freeze({ ...LEVELS });

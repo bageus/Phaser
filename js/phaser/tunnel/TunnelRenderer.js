@@ -18,6 +18,10 @@ const WAVE_CORE_BAND_ALPHA_FACTOR = 0.72;
 const WAVE_MID_BAND_ALPHA_FACTOR = 0.42;
 const WAVE_EDGE_BAND_ALPHA_FACTOR = 0.24;
 const WAVE_OUTER_GLOW_ALPHA_FACTOR = 0.1;
+const TUNNEL_DARKEN_BASE_ALPHA = 0.05;
+const TUNNEL_DARKEN_DEPTH_ALPHA = 0.22;
+const TUNNEL_DARKEN_SIDE_ALPHA = 0.16;
+const TUNNEL_DARKEN_ALPHA_CAP = 0.42;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 4;
 const TILE_DEPTH_OVERLAP = 0.012;
@@ -129,6 +133,26 @@ function drawSoftWaveOverlay(graphics, overlay, depthMix = 0.3, alphaScale = 1) 
 
   graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_GLOW_ALPHA_FACTOR);
   fillQuad(graphics, getQuadBand(quad, 0, 1));
+}
+
+function drawTunnelDarkeningOverlay(graphics, quad, depthRatio, segmentMidAngle, tubeRotation, curveAngle) {
+  const farDepthRatio = 1 - clamp(depthRatio, 0, 1);
+  const lightFacingAngle = tubeRotation + curveAngle;
+  const sideDistance = Math.abs(normalizeAngleDiff(segmentMidAngle - lightFacingAngle));
+  const sideDarkness = Math.pow(clamp(sideDistance / Math.PI, 0, 1), 1.3);
+  const darkeningAlpha = clamp(
+    TUNNEL_DARKEN_BASE_ALPHA +
+      farDepthRatio * TUNNEL_DARKEN_DEPTH_ALPHA +
+      sideDarkness * TUNNEL_DARKEN_SIDE_ALPHA,
+    0,
+    TUNNEL_DARKEN_ALPHA_CAP,
+  );
+  if (darkeningAlpha <= 0.002) {
+    return;
+  }
+
+  graphics.fillStyle(0x000000, darkeningAlpha);
+  fillQuad(graphics, quad);
 }
 
 function lerpPoint(a, b, t) {
@@ -376,6 +400,12 @@ class TunnelRenderer {
         this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
         drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
         this.baseGraphics.fillPath();
+        drawTunnelDarkeningOverlay(this.fogGraphics, {
+          p1: { x: x1, y: y1 },
+          p2: { x: x2, y: y2 },
+          p3: { x: x3, y: y3 },
+          p4: { x: x4, y: y4 },
+        }, depthRatio, segmentMidAngle, tube.rotation, tube.curveAngle);
 
         if (trackCoverage > 0) {
           const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
@@ -497,6 +527,12 @@ class TunnelRenderer {
       this.baseGraphics.fillStyle(trackWallColor, tileFillAlpha);
       drawQuadPath(this.baseGraphics, x1, y1, x2, y2, x3, y3, x4, y4);
       this.baseGraphics.fillPath();
+      drawTunnelDarkeningOverlay(this.fogGraphics, {
+        p1: { x: x1, y: y1 },
+        p2: { x: x2, y: y2 },
+        p3: { x: x3, y: y3 },
+        p4: { x: x4, y: y4 },
+      }, depthRatio, segmentMidAngle, tube.rotation, tube.curveAngle);
       this.drawTileTextureVariant(
         {
           p1: { x: x1, y: y1 },

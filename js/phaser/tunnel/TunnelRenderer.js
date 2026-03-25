@@ -13,8 +13,11 @@ const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
 const WAVE_BASE_ALPHA_CAP = 0.26;
-const WAVE_INNER_BAND_ALPHA_FACTOR = 0.82;
-const WAVE_OUTER_BAND_ALPHA_FACTOR = 0.46;
+const WAVE_ALPHA_MULTIPLIER = 0.5;
+const WAVE_CORE_BAND_ALPHA_FACTOR = 0.72;
+const WAVE_MID_BAND_ALPHA_FACTOR = 0.42;
+const WAVE_EDGE_BAND_ALPHA_FACTOR = 0.24;
+const WAVE_OUTER_GLOW_ALPHA_FACTOR = 0.1;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 2;
 const TUNNEL_TILE_FRAME_COUNT = 16;
@@ -98,6 +101,7 @@ function drawSoftWaveOverlay(graphics, overlay, depthMix = 0.3, alphaScale = 1) 
     (0.14 + overlay.depthRatio * 0.16) *
       overlay.spawnBlend *
       SPAWNED_RING_ALPHA_MULTIPLIER *
+      WAVE_ALPHA_MULTIPLIER *
       alphaScale,
     0,
     WAVE_BASE_ALPHA_CAP,
@@ -113,14 +117,17 @@ function drawSoftWaveOverlay(graphics, overlay, depthMix = 0.3, alphaScale = 1) 
     p4: { x: overlay.x4, y: overlay.y4 },
   };
 
-  graphics.fillStyle(overlayColor, baseAlpha * WAVE_INNER_BAND_ALPHA_FACTOR);
-  fillQuad(graphics, getQuadBand(quad, 0.18, 0.86));
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_CORE_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0.26, 0.74));
 
-  graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_BAND_ALPHA_FACTOR);
-  fillQuad(graphics, getQuadBand(quad, 0, 0.16));
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_MID_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0.14, 0.86));
 
-  graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_BAND_ALPHA_FACTOR);
-  fillQuad(graphics, getQuadBand(quad, 0.88, 1));
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_EDGE_BAND_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0.05, 0.95));
+
+  graphics.fillStyle(overlayColor, baseAlpha * WAVE_OUTER_GLOW_ALPHA_FACTOR);
+  fillQuad(graphics, getQuadBand(quad, 0, 1));
 }
 
 function lerpPoint(a, b, t) {

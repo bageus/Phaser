@@ -20,7 +20,6 @@ const WAVE_EDGE_BAND_ALPHA_FACTOR = 0.24;
 const WAVE_OUTER_GLOW_ALPHA_FACTOR = 0.1;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
 const TILE_OVERDRAW_PX = 2;
-const TUNNEL_TILE_FRAME_COUNT = 16;
 const TILE_TOP_WIDTH_MULTIPLIER = 1.18;
 const QUALITY_PRESETS = Object.freeze({
   low: {
@@ -560,8 +559,7 @@ class TunnelRenderer {
     const tileHeight = Math.max(leftHeight, rightHeight);
     const tileAngle = Math.atan2(quad.p2.y - quad.p1.y, quad.p2.x - quad.p1.x);
     void tile;
-    const frameIndex = Number.isFinite(variant) ? Math.abs(Math.trunc(variant)) % TUNNEL_TILE_FRAME_COUNT : 0;
-    const frameName = `tile_${String(frameIndex).padStart(2, '0')}`;
+    void variant;
     const textureSprite = this.acquireTileSprite(spriteIndex);
     const tileMaskEntry = this.acquireTileMaskEntry(spriteIndex);
 
@@ -578,7 +576,6 @@ class TunnelRenderer {
 
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
-      .setFrame(frameName)
       .setDisplaySize(Math.max(2, tileWidth + TILE_OVERDRAW_PX), Math.max(2, tileHeight + TILE_OVERDRAW_PX))
       .setRotation(tileAngle)
       .setFlipX(false)

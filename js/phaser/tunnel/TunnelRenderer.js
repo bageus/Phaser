@@ -300,7 +300,6 @@ class TunnelRenderer {
 
     depthEntries.sort((a, b) => b.animatedDepth - a.animatedDepth);
 
-    const spawnedRingOverlays = [];
     const trackSlatOverlays = [];
     this.hideUnusedTileSprites(0);
     if (Array.isArray(snapshot?.tubeTiles) && snapshot.tubeTiles.length > 0) {
@@ -397,21 +396,6 @@ class TunnelRenderer {
           }
         }
 
-        if (spawnBlend > 0.01) {
-          spawnedRingOverlays.push({
-            x1,
-            y1,
-            x2,
-            y2,
-            x3,
-            y3,
-            x4,
-            y4,
-            depthRatio,
-            spawnBlend,
-            tileFillAlpha,
-          });
-        }
       }
     }
 
@@ -441,10 +425,6 @@ class TunnelRenderer {
       this.lightGraphics.fillPath();
     }
 
-    for (const overlay of spawnedRingOverlays) {
-      drawSoftWaveOverlay(this.lightGraphics, overlay, 0.24, 1);
-    }
-
     this.drawMouthRing(centerX, centerY, tube);
   }
 
@@ -458,7 +438,6 @@ class TunnelRenderer {
         .filter((lampDepthStep) => Number.isFinite(lampDepthStep))
       : [];
     const lampPulseHalfWidth = Math.max(quality.depthStep * 1.5, 0.9);
-    const spawnedRingOverlays = [];
     let usedSprites = 0;
 
     for (const tile of sortedTiles) {
@@ -523,26 +502,9 @@ class TunnelRenderer {
         tile,
         usedSprites,
       );
-      if (spawnBlend > 0.01) {
-        spawnedRingOverlays.push({
-          x1,
-          y1,
-          x2,
-          y2,
-          x3,
-          y3,
-          x4,
-          y4,
-          depthRatio,
-          spawnBlend,
-        });
-      }
       usedSprites += 1;
     }
-    
-    for (const overlay of spawnedRingOverlays) {
-      drawSoftWaveOverlay(this.lightGraphics, overlay, 0.3, 1.15);
-    }
+
     this.hideUnusedTileSprites(usedSprites);
   }
 

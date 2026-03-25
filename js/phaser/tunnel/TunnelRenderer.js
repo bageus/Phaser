@@ -19,8 +19,10 @@ const WAVE_MID_BAND_ALPHA_FACTOR = 0.42;
 const WAVE_EDGE_BAND_ALPHA_FACTOR = 0.24;
 const WAVE_OUTER_GLOW_ALPHA_FACTOR = 0.1;
 const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
-const TILE_OVERDRAW_PX = 2;
-const TILE_TOP_WIDTH_MULTIPLIER = 1.18;
+const TILE_OVERDRAW_PX = 4;
+const TILE_DEPTH_OVERLAP = 0.012;
+const TILE_TOP_WIDTH_MULTIPLIER_NEAR = 1.0;
+const TILE_TOP_WIDTH_MULTIPLIER_FAR = 1.08;
 const QUALITY_PRESETS = Object.freeze({
   low: {
     depthStep: 3,
@@ -442,7 +444,7 @@ class TunnelRenderer {
 
     for (const tile of sortedTiles) {
       const z1 = tile.z;
-      const z2 = z1 + (tile.depth || 0.06);
+      const z2 = z1 + (tile.depth || 0.06) + TILE_DEPTH_OVERLAP;
       const scale1 = 1 - z1;
       const scale2 = 1 - z2;
       if (scale2 <= 0 || z1 < -0.2 || z1 > 2.1) continue;
@@ -455,7 +457,12 @@ class TunnelRenderer {
       const baseAngleA = tile.angle + tube.rotation + tube.curveAngle;
       const baseAngleWidth = tile.angleWidth || ((Math.PI * 2) / Math.max(8, CONFIG.TUBE_SEGMENTS));
       const nearHalfAngleWidth = baseAngleWidth * 0.5;
-      const farHalfAngleWidth = nearHalfAngleWidth * TILE_TOP_WIDTH_MULTIPLIER;
+      const perspectiveBlend = clamp(z1 / 1.2, 0, 1);
+      const farHalfAngleWidth = nearHalfAngleWidth * lerp(
+        TILE_TOP_WIDTH_MULTIPLIER_NEAR,
+        TILE_TOP_WIDTH_MULTIPLIER_FAR,
+        perspectiveBlend,
+      );
       const segmentCenterAngle = baseAngleA + nearHalfAngleWidth;
       const angleA = segmentCenterAngle - nearHalfAngleWidth;
       const angleB = segmentCenterAngle + nearHalfAngleWidth;
@@ -541,11 +548,12 @@ class TunnelRenderer {
     const textureHeight = textureFrame?.height || 1;
     const targetWidth = Math.max(2, tileWidth + TILE_OVERDRAW_PX);
     const targetHeight = Math.max(2, tileHeight + TILE_OVERDRAW_PX);
-    const uniformScale = Math.max(targetWidth / textureWidth, targetHeight / textureHeight);
+    const scaleX = targetWidth / textureWidth;
+    const scaleY = targetHeight / textureHeight;
 
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
-      .setDisplaySize(textureWidth * uniformScale, textureHeight * uniformScale)
+      .setDisplaySize(textureWidth * scaleX, textureHeight * scaleY)
       .setRotation(tileAngle)
       .setFlipX(false)
       .setFlipY(false)

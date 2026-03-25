@@ -4,8 +4,6 @@ import { TunnelOuterRing } from '../tunnel/TunnelOuterRing.js';
 import { CONFIG } from '../../config.js';
 
 const MAIN_SCENE_KEY = 'MainScene';
-const TUNNEL_TILE_TEXTURE_KEY = 'tunnel_tile_texture';
-const TUNNEL_TILE_TEXTURE_PATH = 'img/tunnel_tile.webp';
 
 class MainSceneController {
   constructor(scene, Phaser) {
@@ -27,9 +25,6 @@ class MainSceneController {
   preload() {
     EntityRenderer.preload(this.scene);
     TunnelOuterRing.preload(this.scene);
-    if (!this.scene.textures.exists(TUNNEL_TILE_TEXTURE_KEY)) {
-      this.scene.load.image(TUNNEL_TILE_TEXTURE_KEY, TUNNEL_TILE_TEXTURE_PATH);
-    }
   }
 
   create() {

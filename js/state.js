@@ -213,7 +213,6 @@ const obstacles = [];
 const bonuses = [];
 const coins = [];
 const spinTargets = [];
-const tubeTiles = [];
 const inputQueue = [];
 
 let laneCooldown = 0;
@@ -258,7 +257,6 @@ export {
   bonuses,
   coins,
   spinTargets,
-  tubeTiles,
   inputQueue,
   getLaneCooldown,
   setLaneCooldown,

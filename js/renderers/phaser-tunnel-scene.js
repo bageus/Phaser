@@ -96,6 +96,7 @@ function createTunnelSceneClass(Phaser) {
 
     create() {
       this.createFallbackTextures();
+      const supportsAdvancedBlend = this.game?.renderer?.type === Phaser.WEBGL;
 
       const { width, height } = this.scale;
       const cx = width * 0.5;
@@ -125,25 +126,45 @@ function createTunnelSceneClass(Phaser) {
       this.innerGradient = this.add.image(cx, cy, tunnelGradientKey).setDisplaySize(width, height).setAlpha(0.84);
       this.layerBg.add(this.innerGradient);
 
-      this.tileA = this.add.tileSprite(cx, cy, tubeRadius * 2.3, tubeRadius * 2.3, tunnelTileKey).setAlpha(0.42).setBlendMode(Phaser.BlendModes.MULTIPLY);
+      this.tileA = this.add
+        .tileSprite(cx, cy, tubeRadius * 2.3, tubeRadius * 2.3, tunnelTileKey)
+        .setAlpha(supportsAdvancedBlend ? 0.42 : 0.62)
+        .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.MULTIPLY : Phaser.BlendModes.NORMAL);
       this.tileB = this.add.tileSprite(cx, cy, tubeRadius * 2, tubeRadius * 2, tunnelTileKey).setAlpha(0.28);
       this.layerDepth.add([this.tileA, this.tileB]);
 
       this.coreVoid = this.add.image(cx, cy, coreVoidKey).setDisplaySize(tubeRadius * 1.2, tubeRadius * 1.2).setAlpha(0.88);
-      this.coreGlow = this.add.image(cx, cy, coreGlowKey).setDisplaySize(tubeRadius * 1.1, tubeRadius * 1.1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.75);
+      this.coreGlow = this.add
+        .image(cx, cy, coreGlowKey)
+        .setDisplaySize(tubeRadius * 1.1, tubeRadius * 1.1)
+        .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+        .setAlpha(supportsAdvancedBlend ? 0.75 : 0.58);
       this.layerGlow.add([this.coreVoid, this.coreGlow]);
 
       this.outerRing = this.add.image(cx, cy, metalRingKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5);
-      this.emissiveRing = this.add.image(cx, cy, emissiveRingKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setBlendMode(Phaser.BlendModes.ADD);
+      this.emissiveRing = this.add
+        .image(cx, cy, emissiveRingKey)
+        .setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5)
+        .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
       this.layerLightRings.add([this.outerRing, this.emissiveRing]);
 
       this.streaks = [
-        this.add.image(cx, cy, streak1Key).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.25),
-        this.add.image(cx, cy, streak2Key).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.2)
+        this.add
+          .image(cx, cy, streak1Key)
+          .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+          .setAlpha(supportsAdvancedBlend ? 0.25 : 0.2),
+        this.add
+          .image(cx, cy, streak2Key)
+          .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+          .setAlpha(supportsAdvancedBlend ? 0.2 : 0.15)
       ];
       this.layerFx.add(this.streaks);
 
-      this.lensDirt = this.add.image(cx, cy, lensDirtKey).setDisplaySize(width, height).setAlpha(0.28).setBlendMode(Phaser.BlendModes.SCREEN);
+      this.lensDirt = this.add
+        .image(cx, cy, lensDirtKey)
+        .setDisplaySize(width, height)
+        .setAlpha(supportsAdvancedBlend ? 0.28 : 0.12)
+        .setBlendMode(supportsAdvancedBlend ? Phaser.BlendModes.SCREEN : Phaser.BlendModes.NORMAL);
       this.rimScratch = this.add.image(cx, cy, rimScratchKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setAlpha(0.2);
       this.layerFx.add([this.lensDirt, this.rimScratch]);
     }

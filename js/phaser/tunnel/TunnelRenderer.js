@@ -48,6 +48,10 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
+function lerpAngle(a, b, t) {
+  return a + normalizeAngleDiff(b - a) * t;
+}
+
 function rgbToInt(r, g, b) {
   return (r << 16) | (g << 8) | b;
 }
@@ -150,6 +154,26 @@ function drawTunnelDarkeningOverlay(graphics, quad, depthRatio, segmentMidAngle,
   fillQuad(graphics, quad);
 }
 
+function drawSegmentGlintOverlay(graphics, quad, segmentMidAngle, tubeRotation, depthRatio, spawnBlend) {
+  const glintCenter = tubeRotation + 0.18;
+  const glintHalfWidth = 0.34;
+  const glintDistance = Math.abs(normalizeAngleDiff(segmentMidAngle - glintCenter));
+  if (glintDistance > glintHalfWidth) return;
+
+  const angleFactor = 1 - glintDistance / glintHalfWidth;
+  const depthFactor = clamp(0.3 + depthRatio * 0.85, 0, 1);
+  const shimmer = 0.75 + 0.25 * Math.sin(tubeRotation * 5 + depthRatio * 18);
+  const alpha = amplifiedAlpha(
+    clamp(angleFactor * angleFactor * depthFactor * spawnBlend * 0.085 * shimmer, 0, 0.32),
+    0.34,
+  );
+  if (alpha <= 0.002) return;
+
+  const color = blendColor(0xa8d7ff, 0xffffff, 0.55 + depthRatio * 0.35);
+  graphics.fillStyle(color, alpha);
+  fillQuad(graphics, getQuadBand(quad, 0.08, 0.48));
+}
+
 function lerpPoint(a, b, t) {
   return {
     x: lerp(a.x, b.x, t),
@@ -199,6 +223,7 @@ class TunnelRenderer {
     this.fxGraphics = null;
     this.flashGraphics = null;
     this.snapshot = null;
+    this.smoothedTube = null;
   }
 
   create() {
@@ -222,6 +247,7 @@ class TunnelRenderer {
   }
 
   resize() {
+    this.smoothedTube = null;
     this.applySnapshot(this.snapshot);
   }
 
@@ -236,6 +262,28 @@ class TunnelRenderer {
     this.fogGraphics = null;
     this.fxGraphics = null;
     this.flashGraphics = null;
+    this.smoothedTube = null;
+  }
+
+  getSmoothedTube(tube) {
+    if (!tube) return null;
+    if (!this.smoothedTube) {
+      this.smoothedTube = { ...tube };
+      return this.smoothedTube;
+    }
+
+    const smoothing = 0.24;
+    this.smoothedTube.rotation = lerpAngle(this.smoothedTube.rotation || 0, tube.rotation || 0, smoothing);
+    this.smoothedTube.scroll = lerp(this.smoothedTube.scroll || 0, tube.scroll || 0, smoothing);
+    this.smoothedTube.waveMod = lerp(this.smoothedTube.waveMod || 0, tube.waveMod || 0, smoothing);
+    this.smoothedTube.curveAngle = lerpAngle(this.smoothedTube.curveAngle || 0, tube.curveAngle || 0, smoothing);
+    this.smoothedTube.curveStrength = lerp(this.smoothedTube.curveStrength || 0, tube.curveStrength || 0, smoothing);
+    this.smoothedTube.curveDirection = tube.curveDirection || this.smoothedTube.curveDirection || 1;
+    this.smoothedTube.centerOffsetX = lerp(this.smoothedTube.centerOffsetX || 0, tube.centerOffsetX || 0, smoothing);
+    this.smoothedTube.centerOffsetY = lerp(this.smoothedTube.centerOffsetY || 0, tube.centerOffsetY || 0, smoothing);
+    this.smoothedTube.speed = lerp(this.smoothedTube.speed || 0, tube.speed || 0, smoothing);
+    this.smoothedTube.quality = tube.quality || this.smoothedTube.quality || 'high';
+    return this.smoothedTube;
   }
 
   drawMouthRing(centerX, centerY, tube) {
@@ -284,17 +332,19 @@ class TunnelRenderer {
     if (!viewport || !tube) {
       return;
     }
+    const renderTube = this.getSmoothedTube(tube);
+    if (!renderTube) return;
 
     const width = viewport.width || this.scene.scale.width;
     const height = viewport.height || this.scene.scale.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const qualityName = tube.quality || 'high';
+    const qualityName = renderTube.quality || 'high';
     const quality = QUALITY_PRESETS[qualityName] || QUALITY_PRESETS.high;
     const segmentCount = CONFIG.TUBE_SEGMENTS;
     const maxDepth = CONFIG.TUBE_DEPTH_STEPS;
-    const normalizedSpeed = clamp((tube.speed || CONFIG.SPEED_START || 1) / Math.max(0.0001, CONFIG.SPEED_START || 1), 0.2, 3);
-    const scrollOffset = (tube.scroll || 0) * 0.035 * normalizedSpeed;
+    const normalizedSpeed = clamp((renderTube.speed || CONFIG.SPEED_START || 1) / Math.max(0.0001, CONFIG.SPEED_START || 1), 0.2, 3);
+    const scrollOffset = (renderTube.scroll || 0) * 0.035 * normalizedSpeed;
     const ringShift = Math.floor(scrollOffset);
     const ringPhase = scrollOffset - ringShift;
     const lampDepthSteps = Array.isArray(snapshot?.lamps)
@@ -344,48 +394,48 @@ class TunnelRenderer {
       const wallColor = blendColor(0x080a14, 0x294266, depthRatio * 0.7);
       for (let i = 0; i < segmentCount; i += quality.segmentStep) {
         const boundaryA =
-          (i / segmentCount) * Math.PI * 2 + tube.rotation + tube.curveAngle;
+          (i / segmentCount) * Math.PI * 2 + renderTube.rotation + renderTube.curveAngle;
         const boundaryB =
           (((i + quality.segmentStep) % segmentCount) / segmentCount) *
             Math.PI *
             2 +
-          tube.rotation +
-          tube.curveAngle;
+          renderTube.rotation +
+          renderTube.curveAngle;
         const segmentMidAngle = (boundaryA + boundaryB) * 0.5;
-        const trackCoverage = getTrackCoverage(segmentMidAngle, tube.rotation, tube.curveAngle);
+        const trackCoverage = getTrackCoverage(segmentMidAngle, renderTube.rotation, renderTube.curveAngle);
 
         const x1 =
           centerX +
           Math.sin(boundaryA) * radius1 +
-          (tube.centerOffsetX || 0) * bend1;
+          (renderTube.centerOffsetX || 0) * bend1;
         const y1 =
           centerY +
           Math.cos(boundaryA) * radius1 * CONFIG.PLAYER_OFFSET +
-          (tube.centerOffsetY || 0) * bend1;
+          (renderTube.centerOffsetY || 0) * bend1;
         const x2 =
           centerX +
           Math.sin(boundaryB) * radius1 +
-          (tube.centerOffsetX || 0) * bend1;
+          (renderTube.centerOffsetX || 0) * bend1;
         const y2 =
           centerY +
           Math.cos(boundaryB) * radius1 * CONFIG.PLAYER_OFFSET +
-          (tube.centerOffsetY || 0) * bend1;
+          (renderTube.centerOffsetY || 0) * bend1;
         const x3 =
           centerX +
           Math.sin(boundaryB) * radius2 +
-          (tube.centerOffsetX || 0) * bend2;
+          (renderTube.centerOffsetX || 0) * bend2;
         const y3 =
           centerY +
           Math.cos(boundaryB) * radius2 * CONFIG.PLAYER_OFFSET +
-          (tube.centerOffsetY || 0) * bend2;
+          (renderTube.centerOffsetY || 0) * bend2;
         const x4 =
           centerX +
           Math.sin(boundaryA) * radius2 +
-          (tube.centerOffsetX || 0) * bend2;
+          (renderTube.centerOffsetX || 0) * bend2;
         const y4 =
           centerY +
           Math.cos(boundaryA) * radius2 * CONFIG.PLAYER_OFFSET +
-          (tube.centerOffsetY || 0) * bend2;
+          (renderTube.centerOffsetY || 0) * bend2;
 
         const tileFillAlpha = clamp(quality.segmentAlpha * spawnBlend, 0.2, 1);
         const trackWallColor = blendColor(wallColor, 0x7aa3cf, 0.32 * trackCoverage);
@@ -397,7 +447,13 @@ class TunnelRenderer {
           p2: { x: x2, y: y2 },
           p3: { x: x3, y: y3 },
           p4: { x: x4, y: y4 },
-        }, depthRatio, segmentMidAngle, tube.rotation, tube.curveAngle);
+        }, depthRatio, segmentMidAngle, renderTube.rotation, renderTube.curveAngle);
+        drawSegmentGlintOverlay(this.fxGraphics, {
+          p1: { x: x1, y: y1 },
+          p2: { x: x2, y: y2 },
+          p3: { x: x3, y: y3 },
+          p4: { x: x4, y: y4 },
+        }, segmentMidAngle, renderTube.rotation, depthRatio, spawnBlend);
 
         if (trackCoverage > 0) {
           const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
@@ -449,7 +505,7 @@ class TunnelRenderer {
       this.lightGraphics.fillPath();
     }
 
-    this.drawMouthRing(centerX, centerY, tube);
+    this.drawMouthRing(centerX, centerY, renderTube);
   }
 
   drawOverlay() {

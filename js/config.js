@@ -1,7 +1,13 @@
 /* ===== CONFIG ===== */
 const BACKEND_URL = "https://ursassbackend-production.up.railway.app";
 const urlParams = new URLSearchParams(window.location.search);
-const requestedRenderer = 'canvas';
+let rendererFromStorage = '';
+try {
+  rendererFromStorage = localStorage.getItem('rendererBackend') || '';
+} catch (_error) {
+  rendererFromStorage = '';
+}
+const requestedRenderer = (urlParams.get('renderer') || rendererFromStorage || 'canvas').trim().toLowerCase();
 const explicitBackendMode = urlParams.get('backend');
 const backendMode = (explicitBackendMode || 'off').trim().toLowerCase();
 const BACKEND_DISABLED = backendMode === 'off' || backendMode === 'offline' || backendMode === 'mock';
@@ -69,10 +75,13 @@ if (isMobile) {
 }
 
 const RENDER_BACKENDS = Object.freeze({
-  CANVAS: 'canvas'
+  CANVAS: 'canvas',
+  PHASER: 'phaser'
 });
 
-const DEFAULT_RENDER_BACKEND = RENDER_BACKENDS.CANVAS;
+const DEFAULT_RENDER_BACKEND = Object.values(RENDER_BACKENDS).includes(requestedRenderer)
+  ? requestedRenderer
+  : RENDER_BACKENDS.CANVAS;
 
 const BONUS_TYPES = {
   SHIELD: "shield",

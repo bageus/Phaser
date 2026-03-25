@@ -26,11 +26,92 @@ function createTunnelSceneClass(Phaser) {
       this.load.image('rim_scratch', resolveAssetPath('img/generated/rim_scratch.svg'));
     }
 
+    createFallbackTextures() {
+      const tileSize = 128;
+      if (!this.textures.exists('tunnel_tile_fallback')) {
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x291d42, 1);
+        g.fillRect(0, 0, tileSize, tileSize);
+        g.lineStyle(2, 0x6f56b1, 0.4);
+        for (let i = 0; i <= tileSize; i += 16) {
+          g.lineBetween(i, 0, i, tileSize);
+          g.lineBetween(0, i, tileSize, i);
+        }
+        g.generateTexture('tunnel_tile_fallback', tileSize, tileSize);
+        g.destroy();
+      }
+
+      if (!this.textures.exists('tunnel_gradient_fallback')) {
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x120d21, 1);
+        g.fillRect(0, 0, tileSize, tileSize);
+        g.fillStyle(0x2d2055, 0.55);
+        g.fillCircle(tileSize / 2, tileSize / 2, tileSize * 0.44);
+        g.fillStyle(0x0a0616, 0.95);
+        g.fillCircle(tileSize / 2, tileSize / 2, tileSize * 0.18);
+        g.generateTexture('tunnel_gradient_fallback', tileSize, tileSize);
+        g.destroy();
+      }
+
+      if (!this.textures.exists('ring_emissive_fallback')) {
+        const ringSize = 320;
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.lineStyle(14, 0x8b5cf6, 0.7);
+        g.strokeCircle(ringSize / 2, ringSize / 2, ringSize * 0.42);
+        g.lineStyle(6, 0x60a5fa, 0.6);
+        g.strokeCircle(ringSize / 2, ringSize / 2, ringSize * 0.37);
+        g.generateTexture('ring_emissive_fallback', ringSize, ringSize);
+        g.destroy();
+      }
+
+      if (!this.textures.exists('metal_ring_fallback')) {
+        const ringSize = 320;
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.lineStyle(20, 0x4d4d65, 0.9);
+        g.strokeCircle(ringSize / 2, ringSize / 2, ringSize * 0.42);
+        g.lineStyle(6, 0xa8a8c2, 0.5);
+        g.strokeCircle(ringSize / 2, ringSize / 2, ringSize * 0.38);
+        g.generateTexture('metal_ring_fallback', ringSize, ringSize);
+        g.destroy();
+      }
+
+      if (!this.textures.exists('soft_disc_fallback')) {
+        const size = 192;
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x100a1d, 0.95);
+        g.fillCircle(size / 2, size / 2, size * 0.42);
+        g.fillStyle(0x7c5cff, 0.35);
+        g.fillCircle(size / 2, size / 2, size * 0.28);
+        g.generateTexture('soft_disc_fallback', size, size);
+        g.destroy();
+      }
+    }
+
+    pickTexture(primary, fallback) {
+      const texture = this.textures.get(primary);
+      const isMissing = !texture || texture.key === '__MISSING';
+      if (!isMissing) return primary;
+      return fallback;
+    }
+
     create() {
+      this.createFallbackTextures();
+
       const { width, height } = this.scale;
       const cx = width * 0.5;
       const cy = height * 0.5;
       const tubeRadius = Math.min(width, height) * 0.38;
+
+      const tunnelTileKey = this.pickTexture('tunnel_tile', 'tunnel_tile_fallback');
+      const tunnelGradientKey = this.pickTexture('tunnel_gradient', 'tunnel_gradient_fallback');
+      const metalRingKey = this.pickTexture('metal_ring', 'metal_ring_fallback');
+      const emissiveRingKey = this.pickTexture('ring_emissive', 'ring_emissive_fallback');
+      const coreVoidKey = this.pickTexture('core_void', 'soft_disc_fallback');
+      const coreGlowKey = this.pickTexture('core_glow', 'soft_disc_fallback');
+      const streak1Key = this.pickTexture('light_streak_1', 'ring_emissive_fallback');
+      const streak2Key = this.pickTexture('light_streak_2', 'ring_emissive_fallback');
+      const lensDirtKey = this.pickTexture('lens_dirt', 'tunnel_gradient_fallback');
+      const rimScratchKey = this.pickTexture('rim_scratch', 'metal_ring_fallback');
 
       this.layerBg = this.add.layer();
       this.layerDepth = this.add.layer();
@@ -41,29 +122,29 @@ function createTunnelSceneClass(Phaser) {
       this.layerFx = this.add.layer();
       this.layerDebug = this.add.layer();
 
-      this.innerGradient = this.add.image(cx, cy, 'tunnel_gradient').setDisplaySize(width, height).setAlpha(0.84);
+      this.innerGradient = this.add.image(cx, cy, tunnelGradientKey).setDisplaySize(width, height).setAlpha(0.84);
       this.layerBg.add(this.innerGradient);
 
-      this.tileA = this.add.tileSprite(cx, cy, tubeRadius * 2.3, tubeRadius * 2.3, 'tunnel_tile').setAlpha(0.42).setBlendMode(Phaser.BlendModes.MULTIPLY);
-      this.tileB = this.add.tileSprite(cx, cy, tubeRadius * 2, tubeRadius * 2, 'tunnel_tile').setAlpha(0.28);
+      this.tileA = this.add.tileSprite(cx, cy, tubeRadius * 2.3, tubeRadius * 2.3, tunnelTileKey).setAlpha(0.42).setBlendMode(Phaser.BlendModes.MULTIPLY);
+      this.tileB = this.add.tileSprite(cx, cy, tubeRadius * 2, tubeRadius * 2, tunnelTileKey).setAlpha(0.28);
       this.layerDepth.add([this.tileA, this.tileB]);
 
-      this.coreVoid = this.add.image(cx, cy, 'core_void').setDisplaySize(tubeRadius * 1.2, tubeRadius * 1.2).setAlpha(0.88);
-      this.coreGlow = this.add.image(cx, cy, 'core_glow').setDisplaySize(tubeRadius * 1.1, tubeRadius * 1.1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.75);
+      this.coreVoid = this.add.image(cx, cy, coreVoidKey).setDisplaySize(tubeRadius * 1.2, tubeRadius * 1.2).setAlpha(0.88);
+      this.coreGlow = this.add.image(cx, cy, coreGlowKey).setDisplaySize(tubeRadius * 1.1, tubeRadius * 1.1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.75);
       this.layerGlow.add([this.coreVoid, this.coreGlow]);
 
-      this.outerRing = this.add.image(cx, cy, 'metal_ring').setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5);
-      this.emissiveRing = this.add.image(cx, cy, 'ring_emissive').setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setBlendMode(Phaser.BlendModes.ADD);
+      this.outerRing = this.add.image(cx, cy, metalRingKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5);
+      this.emissiveRing = this.add.image(cx, cy, emissiveRingKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setBlendMode(Phaser.BlendModes.ADD);
       this.layerLightRings.add([this.outerRing, this.emissiveRing]);
 
       this.streaks = [
-        this.add.image(cx, cy, 'light_streak_1').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.25),
-        this.add.image(cx, cy, 'light_streak_2').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.2)
+        this.add.image(cx, cy, streak1Key).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.25),
+        this.add.image(cx, cy, streak2Key).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.2)
       ];
       this.layerFx.add(this.streaks);
 
-      this.lensDirt = this.add.image(cx, cy, 'lens_dirt').setDisplaySize(width, height).setAlpha(0.28).setBlendMode(Phaser.BlendModes.SCREEN);
-      this.rimScratch = this.add.image(cx, cy, 'rim_scratch').setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setAlpha(0.2);
+      this.lensDirt = this.add.image(cx, cy, lensDirtKey).setDisplaySize(width, height).setAlpha(0.28).setBlendMode(Phaser.BlendModes.SCREEN);
+      this.rimScratch = this.add.image(cx, cy, rimScratchKey).setDisplaySize(tubeRadius * 2.5, tubeRadius * 2.5).setAlpha(0.2);
       this.layerFx.add([this.lensDirt, this.rimScratch]);
     }
 

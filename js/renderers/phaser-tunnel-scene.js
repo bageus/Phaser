@@ -6,18 +6,18 @@ function createTunnelSceneClass(Phaser) {
     }
 
     preload() {
-      this.load.image('ring_emissive', 'img/ring_emissive.webp');
-      this.load.image('tunnel_tile', 'img/tunnel_tile.webp');
-      this.load.image('metal_ring', 'img/metal_ring.webp');
-      this.load.image('tunnel_gradient', 'img/tunnel_gradient.webp');
+      this.load.image('ring_emissive', '/img/ring_emissive.webp');
+      this.load.image('tunnel_tile', '/img/tunnel_tile.webp');
+      this.load.image('metal_ring', '/img/metal_ring.webp');
+      this.load.image('tunnel_gradient', '/img/tunnel_gradient.webp');
 
-      this.load.image('core_void', 'img/generated/core_void.svg');
-      this.load.image('core_glow', 'img/generated/core_glow.svg');
-      this.load.image('light_streak_1', 'img/generated/light_streak_1.svg');
-      this.load.image('light_streak_2', 'img/generated/light_streak_2.svg');
-      this.load.image('dust_particle', 'img/generated/dust_particle.svg');
-      this.load.image('lens_dirt', 'img/generated/lens_dirt.svg');
-      this.load.image('rim_scratch', 'img/generated/rim_scratch.svg');
+      this.load.image('core_void', '/img/generated/core_void.svg');
+      this.load.image('core_glow', '/img/generated/core_glow.svg');
+      this.load.image('light_streak_1', '/img/generated/light_streak_1.svg');
+      this.load.image('light_streak_2', '/img/generated/light_streak_2.svg');
+      this.load.image('dust_particle', '/img/generated/dust_particle.svg');
+      this.load.image('lens_dirt', '/img/generated/lens_dirt.svg');
+      this.load.image('rim_scratch', '/img/generated/rim_scratch.svg');
     }
 
     create() {

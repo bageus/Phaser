@@ -536,9 +536,16 @@ class TunnelRenderer {
     maskGraphics.closePath();
     maskGraphics.fillPath();
 
+    const textureFrame = this.scene.textures.getFrame(TUNNEL_TILE_TEXTURE_KEY);
+    const textureWidth = textureFrame?.width || 1;
+    const textureHeight = textureFrame?.height || 1;
+    const targetWidth = Math.max(2, tileWidth + TILE_OVERDRAW_PX);
+    const targetHeight = Math.max(2, tileHeight + TILE_OVERDRAW_PX);
+    const uniformScale = Math.max(targetWidth / textureWidth, targetHeight / textureHeight);
+
     textureSprite
       .setPosition(pCenter.x, pCenter.y)
-      .setDisplaySize(Math.max(2, tileWidth + TILE_OVERDRAW_PX), Math.max(2, tileHeight + TILE_OVERDRAW_PX))
+      .setDisplaySize(textureWidth * uniformScale, textureHeight * uniformScale)
       .setRotation(tileAngle)
       .setFlipX(false)
       .setFlipY(false)

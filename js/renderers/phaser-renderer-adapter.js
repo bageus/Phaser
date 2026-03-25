@@ -61,7 +61,7 @@ function createPhaserRendererAdapter() {
       const viewport = initialSnapshot?.viewport || { width: host.clientWidth || 360, height: host.clientHeight || 640 };
 
       game = new Phaser.Game({
-        type: Phaser.WEBGL,
+        type: Phaser.AUTO,
         parent: host,
         width: Math.max(1, Math.round(viewport.width)),
         height: Math.max(1, Math.round(viewport.height)),

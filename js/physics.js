@@ -1,5 +1,5 @@
 import { CONFIG, BONUS_TYPES } from './config.js';
-import { player, gameState, spinTargets, obstacles, bonuses, coins, tubeTiles, inputQueue, DOM, curves, getLaneCooldown, setLaneCooldown } from './state.js';
+import { player, gameState, spinTargets, obstacles, bonuses, coins, inputQueue, DOM, curves, getLaneCooldown, setLaneCooldown } from './state.js';
 import { audioManager } from './audio.js';
 import { spawnParticles } from './particles.js';
 import { playerEffects, playerUpgrades, getShieldUpgradeSnapshot } from './store.js';
@@ -8,39 +8,6 @@ import { project, projectPlayer, updatePlayerAnimation } from './renderer.js';
 import { endGame } from './game.js';
 
 let laneCooldown = getLaneCooldown();
-const TUBE_TILE_RING_COUNT = 18;
-const TUBE_TILE_Z_STEP = 0.06;
-const TUBE_TILE_NEAR_Z = 0.18;
-const TUBE_TILE_DEPTH_SPAN = TUBE_TILE_RING_COUNT * TUBE_TILE_Z_STEP;
-const TUBE_TILE_FAR_Z = TUBE_TILE_NEAR_Z + TUBE_TILE_DEPTH_SPAN;
-const TUBE_TILE_WRAP_Z = TUBE_TILE_NEAR_Z - TUBE_TILE_Z_STEP;
-const TUBE_TILE_VARIANT_COUNT = 4;
-const TUBE_TILE_SCROLL_BASE_PER_SECOND = CONFIG.SPEED_START * 16;
-
-function getDeterministicTileVariant(ring, segment) {
-  // Ограничиваем набор вариантов, чтобы убрать периодически появляющееся
-  // самое тёмное кольцо между циклами спавна плиток.
-  return (ring + segment) % TUBE_TILE_VARIANT_COUNT;
-}
-
-function initializeTubeTileGrid() {
-  if (tubeTiles.length > 0) return;
-  const segmentCount = Math.max(8, CONFIG.TUBE_SEGMENTS);
-  const angleWidth = (Math.PI * 2) / segmentCount;
-
-  for (let ring = 0; ring < TUBE_TILE_RING_COUNT; ring += 1) {
-    const z = TUBE_TILE_NEAR_Z + ring * TUBE_TILE_Z_STEP;
-    for (let segment = 0; segment < segmentCount; segment += 1) {
-      tubeTiles.push({
-        angle: segment * angleWidth,
-        angleWidth,
-        z,
-        depth: TUBE_TILE_Z_STEP,
-        variant: getDeterministicTileVariant(ring, segment)
-      });
-    }
-  }
-}
 
 function getViewportCenter() {
   const width = DOM.gameViewport?.clientWidth || window.innerWidth || 360;
@@ -90,7 +57,6 @@ function resetGameSessionState() {
   gameState.debugStats.uiMs = 0;
   gameState.debugStats.frameMs = 0;
   spinTargets.length = 0;
-  tubeTiles.length = 0;
 }
 
 /* ===== SPAWN FUNCTIONS ===== */
@@ -340,8 +306,6 @@ function update(delta) {
 
   gameState.deltaTime = delta;
 
-  initializeTubeTileGrid();
-
   const speedLevel = Math.floor(gameState.distance / CONFIG.SPEED_INCREMENT_INTERVAL);
   const speedIncrementMultiplier = gameState.distance >= CONFIG.SPEED_INCREMENT_BOOST_DISTANCE
     ? CONFIG.SPEED_INCREMENT_BOOST_MULTIPLIER
@@ -430,18 +394,6 @@ function update(delta) {
 
   for (const t of spinTargets) {
     t.z -= gameState.speed * 0.8;
-  }
-
-  const speedGrowthRatio = Math.max(gameState.speed / Math.max(CONFIG.SPEED_START, 0.0001), 0.15);
-  const tubeTileScrollDelta = TUBE_TILE_SCROLL_BASE_PER_SECOND * speedGrowthRatio * delta;
-
-  for (const tile of tubeTiles) {
-    tile.z -= tubeTileScrollDelta;
-    if (tile.z <= TUBE_TILE_WRAP_Z) {
-      // Важно: переносим на длину сетки (span), а не на абсолютную far-позицию.
-      // Иначе между циклами появлялся зазор по глубине (чёрное кольцо).
-      tile.z += TUBE_TILE_DEPTH_SPAN;
-    }
   }
 
   // Remove off-screen objects

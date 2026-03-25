@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { isAuthenticated, saveResultToLeaderboard, loadAndDisplayLeaderboard, updateWalletUI, resetWalletPlayerUI, resetLeaderboardUI } from './api.js';
 import { audioManager, toggleSfxMute, toggleMusicMute, syncAllAudioUI, restoreAudioSettings, initAudioToggles } from './audio.js';
-import { DOM, gameState, curves, player, obstacles, bonuses, coins, spinTargets, tubeTiles, inputQueue, getBestScore, getBestDistance, setBestScore, setBestDistance } from './state.js';
+import { DOM, gameState, curves, player, obstacles, bonuses, coins, spinTargets, inputQueue, getBestScore, getBestDistance, setBestScore, setBestDistance } from './state.js';
 import { resetGameSessionState, update } from './physics.js';
 import { createGameRenderer, getCanvasSize } from './renderers/index.js';
 import { createRenderSnapshot } from './render-snapshot.js';
@@ -319,7 +319,6 @@ function actualStartGame() {
       bonuses.length = 0;
       coins.length = 0;
       spinTargets.length = 0;
-      tubeTiles.length = 0;
       particlePool.clear();
 
       // Apply player upgrades
@@ -499,7 +498,6 @@ function goToMainMenu() {
   bonuses.length = 0;
   coins.length = 0;
   spinTargets.length = 0;
-  tubeTiles.length = 0;
   particlePool.clear();
   inputQueue.length = 0;
 

@@ -28,9 +28,11 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
 const DEBUG_SIDE_SPRITES_PER_SIDE = 4;
-const DEBUG_SPRITE_SIZE = 120;
+const DEBUG_SPRITE_SIZE = 152;
 const DEBUG_BASE_X_OFFSET_FACTOR = 0.86;
 const DEBUG_PULSE_PERIOD_MS = 1200;
+const DEBUG_SWAY_AMPLITUDE_BASE = 10;
+const DEBUG_VERTICAL_DRIFT_BASE = 7;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -77,6 +79,7 @@ class TunnelOuterRing {
     this.backEmitters = [];
     this.frontEmitters = [];
     this.debugSprites = [];
+    this.debugSpriteMeta = [];
 
     this.createParticleLayers(centerX, centerY);
   }
@@ -94,33 +97,34 @@ class TunnelOuterRing {
     const verticalStep = (this.particleAreaRadiusY * 2) / (DEBUG_SIDE_SPRITES_PER_SIDE + 1);
     const xOffset = this.particleAreaRadiusX * DEBUG_BASE_X_OFFSET_FACTOR;
 
-    this.backParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => (
-      this.scene.add
-        .sprite(
-          centerX - xOffset,
-          centerY - this.particleAreaRadiusY + verticalStep * (index + 1),
-          textureKey,
-        )
+    this.backParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => {
+      const y = centerY - this.particleAreaRadiusY + verticalStep * (index + 1);
+      return this.scene.add
+        .sprite(centerX - xOffset, y, textureKey)
         .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
         .setDepth(PARTICLE_DEPTH_BACK)
-    ));
+        .setBlendMode('ADD');
+    });
 
-    this.frontParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => (
-      this.scene.add
-        .sprite(
-          centerX + xOffset,
-          centerY - this.particleAreaRadiusY + verticalStep * (index + 1),
-          textureKey,
-        )
+    this.frontParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => {
+      const y = centerY - this.particleAreaRadiusY + verticalStep * (index + 1);
+      return this.scene.add
+        .sprite(centerX + xOffset, y, textureKey)
         .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
         .setDepth(PARTICLE_DEPTH_FRONT)
-    ));
+        .setBlendMode('ADD');
+    });
 
     this.debugSprites = [...this.backParticles, ...this.frontParticles];
     this.debugSprites.forEach((sprite, index) => {
       const textureForSprite = particleTextureKeys[index % particleTextureKeys.length];
       sprite.setTexture(textureForSprite);
     });
+    this.debugSpriteMeta = this.debugSprites.map((sprite, index) => ({
+      baseX: sprite.x,
+      baseY: sprite.y,
+      phase: index * 0.8,
+    }));
 
     this.backEmitters = [];
     this.frontEmitters = [];
@@ -152,20 +156,29 @@ class TunnelOuterRing {
       return;
     }
 
-    const alphaBase = clamp(this.vfxConfig.glowAlpha, 0.2, 0.98);
+    const alphaBase = clamp(this.vfxConfig.glowAlpha * 1.75, 0.6, 0.98);
     const pulse = 0.5 + 0.5 * Math.sin(this.scene.time.now / DEBUG_PULSE_PERIOD_MS);
     const speedBoost = this.vfxConfig.tieToGameSpeed ? this.speedRatio : 0;
-    const targetAlpha = clamp(alphaBase * (0.82 + pulse * 0.28), 0.2, 1);
-    const targetScale = 1 + 0.04 * pulse + 0.06 * speedBoost;
+    const targetAlpha = clamp(alphaBase * (0.86 + pulse * 0.34), 0.58, 1);
+    const targetScale = 1.06 + 0.08 * pulse + 0.08 * speedBoost;
 
     this.debugSprites.forEach((sprite, index) => {
+      const meta = this.debugSpriteMeta[index];
+      if (!meta) {
+        return;
+      }
       const isRight = index >= DEBUG_SIDE_SPRITES_PER_SIDE;
       const sideSign = isRight ? 1 : -1;
       const xBase = this.particleCenterX + sideSign * this.particleAreaRadiusX * DEBUG_BASE_X_OFFSET_FACTOR;
-      const sway = (2 + index) * Math.sin((this.scene.time.now / 700) + index);
+      const swayAmplitude = DEBUG_SWAY_AMPLITUDE_BASE + index * 1.6 + speedBoost * 12;
+      const driftAmplitude = DEBUG_VERTICAL_DRIFT_BASE + (index % DEBUG_SIDE_SPRITES_PER_SIDE) * 1.4 + speedBoost * 8;
+      const sway = swayAmplitude * Math.sin((this.scene.time.now / 580) + meta.phase);
+      const yDrift = driftAmplitude * Math.cos((this.scene.time.now / 760) + meta.phase * 1.2);
       sprite.setAlpha(targetAlpha);
       sprite.setScale(targetScale);
       sprite.x = xBase + sway;
+      sprite.y = meta.baseY + yDrift;
+      sprite.rotation = (0.08 + speedBoost * 0.2) * Math.sin((this.scene.time.now / 900) + meta.phase);
     });
   }
 
@@ -221,6 +234,7 @@ class TunnelOuterRing {
     this.backEmitters = [];
     this.frontEmitters = [];
     this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -240,6 +254,7 @@ class TunnelOuterRing {
     this.backEmitters = [];
     this.frontEmitters = [];
     this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -254,6 +269,7 @@ class TunnelOuterRing {
     this.backEmitters = [];
     this.frontEmitters = [];
     this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.image = null;
   }
 }

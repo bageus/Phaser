@@ -25,13 +25,14 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
   speedMax: 0.25,
 });
 
-const PARTICLE_EDGE_FADE_START = 0.64;
-const PARTICLE_EDGE_FADE_POWER = 1.8;
-const PARTICLE_WALL_BAND_INNER = 0.74;
-const PARTICLE_WALL_BAND_OUTER = 0.97;
-const PARTICLE_PERIODIC_SWAY_MS = 1200;
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
+const DEBUG_SPRITE_SIZE = 96;
+const DEBUG_PULSE_PERIOD_MS = 1200;
+const DEBUG_ALPHA_FRONT_MULTIPLIER = 1.08;
+const DEBUG_ALPHA_BACK_MULTIPLIER = 0.82;
+const DEBUG_MIN_LIFESPAN_MS = 900;
+const DEBUG_MAX_LIFESPAN_MS = 1800;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -40,6 +41,10 @@ function assetUrl(path) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function randomRange(min, max) {
+  return min + Math.random() * (max - min);
 }
 
 class TunnelOuterRing {
@@ -77,17 +82,10 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
 
     this.createParticleLayers(centerX, centerY);
-  }
-
-  createParticleAlphaConfig(baseAlpha) {
-    const safeAlpha = clamp(baseAlpha, 0.38, 0.98);
-    return {
-      start: safeAlpha,
-      end: 0,
-      ease: 'Quad.easeOut',
-    };
   }
 
   createParticleLayers(centerX, centerY) {
@@ -99,75 +97,59 @@ class TunnelOuterRing {
       return;
     }
 
-    const backAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.56);
-    const frontAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha);
+    const backCount = clamp(Math.round(this.vfxConfig.particlesBackCount * 0.3), 8, 22);
+    const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.3), 10, 28);
+    const totalCount = backCount + frontCount;
+    const seedTexture = particleTextureKeys[0];
 
-    const sideSpawnX = () => {
-      const side = Math.random() < 0.5 ? -1 : 1;
-      const minBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_INNER;
-      const maxBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_OUTER;
-      return centerX + side * (minBand + Math.random() * (maxBand - minBand));
+    this.debugSprites = Array.from({ length: totalCount }, () => (
+      this.scene.add
+        .sprite(centerX, centerY, seedTexture)
+        .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
+        .setBlendMode('NORMAL')
+    ));
+
+    const randomPointInTube = () => {
+      const angle = randomRange(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random());
+      return {
+        x: centerX + Math.cos(angle) * this.particleAreaRadiusX * 0.56 * radius,
+        y: centerY + Math.sin(angle) * this.particleAreaRadiusY * 0.52 * radius,
+      };
     };
 
-    const toWorldYRange = (range) => ({
-      min: centerY + range.min,
-      max: centerY + range.max,
+    const createMeta = (isFront) => {
+      const spawn = randomPointInTube();
+      const angle = randomRange(0, Math.PI * 2);
+      return {
+        isFront,
+        phase: randomRange(0, Math.PI * 2),
+        ageMs: randomRange(0, DEBUG_MAX_LIFESPAN_MS),
+        lifeMs: randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS),
+        baseScale: randomRange(0.76, 1.18),
+        velocityX: Math.cos(angle) * randomRange(8, 26),
+        velocityY: Math.sin(angle) * randomRange(8, 24),
+        x: spawn.x,
+        y: spawn.y,
+      };
+    };
+
+    this.debugSpriteMeta = this.debugSprites.map((sprite, index) => {
+      const isFront = index >= backCount;
+      const meta = createMeta(isFront);
+      const textureForSprite = particleTextureKeys[Math.floor(Math.random() * particleTextureKeys.length)];
+      sprite
+        .setTexture(textureForSprite)
+        .setDepth(isFront ? PARTICLE_DEPTH_FRONT : PARTICLE_DEPTH_BACK)
+        .setPosition(meta.x, meta.y);
+      return meta;
     });
 
-    const createParticlesLayer = (textureKey, alphaConfig, scaleConfig, speedMin, speedMax, maxY, frequency, lifespan, depth, yRange) => (
-      this.scene.add.particles(0, 0, textureKey, {
-        x: { onEmit: sideSpawnX },
-        y: toWorldYRange(yRange),
-        alpha: alphaConfig,
-        scale: scaleConfig,
-        speedX: {
-          onEmit: (particle) => {
-            const direction = particle.x >= centerX ? -1 : 1;
-            return direction * (speedMin + Math.random() * (speedMax - speedMin));
-          },
-        },
-        speedY: { min: -maxY, max: maxY },
-        frequency,
-        quantity: 2,
-        lifespan,
-        blendMode: 'ADD',
-      }).setDepth(depth)
-    );
+    this.backParticles = this.debugSprites.filter((_, index) => index < backCount);
+    this.frontParticles = this.debugSprites.filter((_, index) => index >= backCount);
 
-    const textureCount = particleTextureKeys.length;
-    const baseBackRate = Math.max(1, this.vfxConfig.particlesBackCount * 1.2);
-    const baseFrontRate = Math.max(1, this.vfxConfig.particlesFrontCount * 1.35);
-    const perTextureBackFrequency = 1000 / Math.max(1, baseBackRate / textureCount);
-    const perTextureFrontFrequency = 1000 / Math.max(1, baseFrontRate / textureCount);
-
-    this.backParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
-      textureKey,
-      backAlpha,
-      { start: 0.24, end: 0.08 },
-      6,
-      14,
-      8,
-      perTextureBackFrequency,
-      { min: 1400, max: 2200 },
-      PARTICLE_DEPTH_BACK,
-      { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
-    ));
-
-    this.frontParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
-      textureKey,
-      frontAlpha,
-      { start: 0.34, end: 0.12 },
-      10,
-      20,
-      10,
-      perTextureFrontFrequency,
-      { min: 1200, max: 1900 },
-      PARTICLE_DEPTH_FRONT,
-      { min: -this.particleAreaRadiusY * 0.86, max: this.particleAreaRadiusY * 0.86 },
-    ));
-
-    this.backEmitters = [...this.backParticles];
-    this.frontEmitters = [...this.frontParticles];
+    this.backEmitters = [];
+    this.frontEmitters = [];
     this.ensureParticlesOnTop();
   }
 
@@ -192,71 +174,60 @@ class TunnelOuterRing {
   }
 
   updateParticleIntensity() {
-    if (!this.vfxConfig.particlesEnabled) {
-      this.backEmitters.forEach((emitter) => emitter?.stop());
-      this.frontEmitters.forEach((emitter) => emitter?.stop());
+    if (!this.debugSprites?.length) {
       return;
     }
 
-    const spawnBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.32 : 1;
-    const speedBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.28 : 1;
-    const speedMultiplier = this.vfxConfig.particleSpeedMultiplier * speedBoost;
-    const pulse = 1 + 0.35 * (0.5 + 0.5 * Math.sin(this.scene.time.now / PARTICLE_PERIODIC_SWAY_MS));
-    const safeBackRate = Math.max(1, this.vfxConfig.particlesBackCount * spawnBoost * 1.2 * pulse);
-    const safeFrontRate = Math.max(1, this.vfxConfig.particlesFrontCount * spawnBoost * 1.35 * pulse);
+    const alphaBase = clamp(this.vfxConfig.glowAlpha, 0.2, 0.72);
+    const pulse = 0.5 + 0.5 * Math.sin(this.scene.time.now / DEBUG_PULSE_PERIOD_MS);
+    const speedBoost = this.vfxConfig.tieToGameSpeed ? this.speedRatio : 0;
+    const speedMultiplier = Number.isFinite(this.vfxConfig.particleSpeedMultiplier)
+      ? Math.max(0.4, this.vfxConfig.particleSpeedMultiplier)
+      : 1;
+    const targetScale = 0.9 + 0.06 * pulse + 0.06 * speedBoost;
+    const deltaMs = Math.max(8, this.scene.game.loop.delta || 16.67);
+    const step = deltaMs / 1000;
+    const now = this.scene.time.now;
 
-    const backEmitterCount = Math.max(1, this.backEmitters.length);
-    const frontEmitterCount = Math.max(1, this.frontEmitters.length);
-    const perEmitterBackFrequency = 1000 / Math.max(1, safeBackRate / backEmitterCount);
-    const perEmitterFrontFrequency = 1000 / Math.max(1, safeFrontRate / frontEmitterCount);
-
-    this.backEmitters.forEach((emitter) => {
-      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
-        emitter.start();
+    this.debugSprites.forEach((sprite, index) => {
+      const meta = this.debugSpriteMeta[index];
+      if (!meta) {
+        return;
       }
-      emitter.setFrequency(perEmitterBackFrequency);
-      this.setEmitterVelocity(emitter, 6 * speedMultiplier, 14 * speedMultiplier, 8 * speedMultiplier);
-    });
-
-    this.frontEmitters.forEach((emitter) => {
-      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
-        emitter.start();
+      meta.ageMs += deltaMs * (0.9 + speedBoost * 0.7);
+      if (meta.ageMs >= meta.lifeMs) {
+        const angle = randomRange(0, Math.PI * 2);
+        meta.ageMs = 0;
+        meta.lifeMs = randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS);
+        meta.baseScale = randomRange(0.76, 1.18);
+        meta.phase = randomRange(0, Math.PI * 2);
+        meta.x = this.particleCenterX + Math.cos(angle) * this.particleAreaRadiusX * randomRange(0.12, 0.58);
+        meta.y = this.particleCenterY + Math.sin(angle) * this.particleAreaRadiusY * randomRange(0.12, 0.56);
+        meta.velocityX = Math.cos(angle) * randomRange(8, 26);
+        meta.velocityY = Math.sin(angle) * randomRange(8, 24);
       }
-      emitter.setFrequency(perEmitterFrontFrequency);
-      this.setEmitterVelocity(emitter, 10 * speedMultiplier, 20 * speedMultiplier, 10 * speedMultiplier);
+
+      meta.x += meta.velocityX * speedMultiplier * step;
+      meta.y += meta.velocityY * speedMultiplier * step;
+
+      const dx = (meta.x - this.particleCenterX) / Math.max(1, this.particleAreaRadiusX * 0.62);
+      const dy = (meta.y - this.particleCenterY) / Math.max(1, this.particleAreaRadiusY * 0.62);
+      const outside = (dx * dx + dy * dy) > 1;
+      if (outside) {
+        meta.ageMs = meta.lifeMs + 1;
+      }
+
+      const lifeRatio = 1 - Math.abs((meta.ageMs / meta.lifeMs) * 2 - 1);
+      const layerAlpha = alphaBase
+        * (meta.isFront ? DEBUG_ALPHA_FRONT_MULTIPLIER : DEBUG_ALPHA_BACK_MULTIPLIER)
+        * (0.84 + pulse * 0.24)
+        * (0.55 + lifeRatio * 0.55);
+      sprite.setAlpha(clamp(layerAlpha, 0.2, 0.74));
+      sprite.setScale(targetScale * meta.baseScale);
+      sprite.x = meta.x;
+      sprite.y = meta.y;
+      sprite.rotation = (0.03 + speedBoost * 0.08) * Math.sin((now / (960 / speedMultiplier)) + meta.phase);
     });
-  }
-
-  setEmitterVelocity(emitter, minXAbs, maxXAbs, maxYAbs) {
-    if (!emitter) {
-      return;
-    }
-
-    if (typeof emitter.setSpeedX === 'function') {
-      emitter.setSpeedX({
-        onEmit: (particle) => {
-          const direction = particle.x >= this.particleCenterX ? -1 : 1;
-          return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
-        },
-      });
-    }
-
-    if (typeof emitter.setSpeedY === 'function') {
-      emitter.setSpeedY({ min: -maxYAbs, max: maxYAbs });
-      return;
-    }
-
-    if (typeof emitter.speedX === 'object' && emitter.speedX !== null) {
-      emitter.speedX.onEmit = (particle) => {
-        const direction = particle.x >= this.particleCenterX ? -1 : 1;
-        return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
-      };
-    }
-
-    if (typeof emitter.speedY === 'object' && emitter.speedY !== null) {
-      emitter.speedY.min = -maxYAbs;
-      emitter.speedY.max = maxYAbs;
-    }
   }
 
   applySnapshot(snapshot) {
@@ -310,6 +281,8 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -328,6 +301,8 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -341,6 +316,8 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
     this.image = null;
   }
 }

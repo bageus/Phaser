@@ -27,14 +27,12 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
-const DEBUG_SPRITE_SIZE = 16;
-const DEBUG_SPRITE_SIZE = 72;
+const DEBUG_SPRITE_SIZE = 4;
 const DEBUG_PULSE_PERIOD_MS = 1200;
 const DEBUG_ALPHA_FRONT_MULTIPLIER = 1.08;
 const DEBUG_ALPHA_BACK_MULTIPLIER = 0.82;
 const DEBUG_MIN_LIFESPAN_MS = 900;
 const DEBUG_MAX_LIFESPAN_MS = 1800;
-const LEFT_ONLY_TEXTURE_KEY = 'energy_effect.webp';
 const LEFT_ONLY_TEXTURE_KEY = 'energy_effect.webp';
 
 function assetUrl(path) {
@@ -88,7 +86,6 @@ class TunnelOuterRing {
     this.debugSprites = [];
     this.debugSpriteMeta = [];
     this.activeParticleTextureKeys = [];
-    this.activeParticleTextureKeys = [];
 
     this.createParticleLayers(centerX, centerY);
   }
@@ -103,8 +100,8 @@ class TunnelOuterRing {
     }
     this.activeParticleTextureKeys = [...particleTextureKeys];
 
-    const backCount = clamp(Math.round(this.vfxConfig.particlesBackCount * 0.4), 10, 30);
-    const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.4), 12, 36);
+    const backCount = clamp(Math.round(this.vfxConfig.particlesBackCount * 0.08), 2, 8);
+    const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.08), 3, 10);
     const totalCount = backCount + frontCount;
     const seedTexture = particleTextureKeys[0];
 
@@ -227,22 +224,6 @@ class TunnelOuterRing {
       meta.x += meta.velocityX * speedMultiplier * step;
       meta.y += meta.velocityY * speedMultiplier * step;
 
-        meta.baseScale = randomRange(0.66, 1);
-        meta.phase = randomRange(0, Math.PI * 2);
-        meta.textureKey = this.activeParticleTextureKeys[
-          Math.floor(Math.random() * this.activeParticleTextureKeys.length)
-        ] || meta.textureKey;
-        meta.x = this.particleCenterX + Math.cos(angle) * this.particleAreaRadiusX * randomRange(0.12, 0.58);
-        meta.y = this.particleCenterY + Math.sin(angle) * this.particleAreaRadiusY * randomRange(0.12, 0.56);
-        meta.velocityX = Math.cos(angle) * randomRange(8, 26);
-        meta.velocityY = Math.sin(angle) * randomRange(8, 24);
-
-        sprite.setTexture(meta.textureKey);
-      }
-
-      meta.x += meta.velocityX * speedMultiplier * step;
-      meta.y += meta.velocityY * speedMultiplier * step;
-
       const dx = (meta.x - this.particleCenterX) / Math.max(1, this.particleAreaRadiusX * 0.62);
       const dy = (meta.y - this.particleCenterY) / Math.max(1, this.particleAreaRadiusY * 0.62);
       const outside = (dx * dx + dy * dy) > 1;
@@ -272,7 +253,6 @@ class TunnelOuterRing {
     const isRightSide = meta.x >= this.particleCenterX;
     const shouldMirrorOnRight = meta.textureKey === LEFT_ONLY_TEXTURE_KEY && isRightSide;
     sprite.setFlipX(Boolean(shouldMirrorOnRight));
-
   }
 
   applySnapshot(snapshot) {
@@ -329,8 +309,6 @@ class TunnelOuterRing {
     this.debugSprites = [];
     this.debugSpriteMeta = [];
     this.activeParticleTextureKeys = [];
-    this.activeParticleTextureKeys = [];
-
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -352,8 +330,6 @@ class TunnelOuterRing {
     this.debugSprites = [];
     this.debugSpriteMeta = [];
     this.activeParticleTextureKeys = [];
-    this.activeParticleTextureKeys = [];
-
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -369,7 +345,6 @@ class TunnelOuterRing {
     this.frontEmitters = [];
     this.debugSprites = [];
     this.debugSpriteMeta = [];
-    this.activeParticleTextureKeys = [];
     this.activeParticleTextureKeys = [];
     this.image = null;
   }

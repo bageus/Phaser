@@ -211,13 +211,17 @@ class TunnelOuterRing {
     const perEmitterFrontFrequency = 1000 / Math.max(1, safeFrontRate / frontEmitterCount);
 
     this.backEmitters.forEach((emitter) => {
-      emitter.start();
+      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
+        emitter.start();
+      }
       emitter.setFrequency(perEmitterBackFrequency);
       this.setEmitterVelocity(emitter, 18 * speedMultiplier, 36 * speedMultiplier, 16 * speedMultiplier);
     });
 
     this.frontEmitters.forEach((emitter) => {
-      emitter.start();
+      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
+        emitter.start();
+      }
       emitter.setFrequency(perEmitterFrontFrequency);
       this.setEmitterVelocity(emitter, 26 * speedMultiplier, 52 * speedMultiplier, 20 * speedMultiplier);
     });

@@ -1,6 +1,10 @@
 const BASE_URL = import.meta.env.BASE_URL || './';
 const TUNNEL_OUTER_RING_TEXTURE_KEY = 'metal_ring.webp';
 const TUNNEL_OUTER_RING_TEXTURE_PATH = 'img/metal_ring.webp';
+const ENERGY_PARTICLE_ATLAS_KEY = 'energy_particles_atlas';
+const ENERGY_PARTICLE_ATLAS_IMAGE_PATH = 'img/generated/energy_particles_no_bg.webp';
+const ENERGY_PARTICLE_ATLAS_JSON_PATH = 'img/generated/energy_particles_spritesheet_4frames.json';
+const ENERGY_PARTICLE_FRAME_NAMES = Object.freeze(['particle_0', 'particle_1', 'particle_2', 'particle_3']);
 const DEFAULT_ROTATION_SPEED = 0;
 const TUNNEL_OUTER_RING_SOURCE_WIDTH = 2048;
 const TUNNEL_OUTER_RING_SOURCE_HEIGHT = 1365;
@@ -8,34 +12,145 @@ const TUNNEL_OUTER_RING_INNER_RADIUS_X = 393;
 const TUNNEL_OUTER_RING_INNER_RADIUS_Y = 393;
 const TUNNEL_OUTER_RING_FIT_SCALE = 0.9;
 
+const DEFAULT_VFX_CONFIG = Object.freeze({
+  particlesEnabled: true,
+  particlesBackCount: 40,
+  particlesFrontCount: 54,
+  particleSpeedMultiplier: 1,
+  glowAlpha: 0.18,
+  tieToGameSpeed: true,
+  speedMin: 0.01,
+  speedMax: 0.25,
+});
+
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
   return `${normalizedBase}${path}`;
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 class TunnelOuterRing {
   static preload(scene) {
-    if (scene.textures.exists(TUNNEL_OUTER_RING_TEXTURE_KEY)) {
-      return;
+    if (!scene.textures.exists(TUNNEL_OUTER_RING_TEXTURE_KEY)) {
+      scene.load.image(TUNNEL_OUTER_RING_TEXTURE_KEY, assetUrl(TUNNEL_OUTER_RING_TEXTURE_PATH));
     }
-    scene.load.image(
-      TUNNEL_OUTER_RING_TEXTURE_KEY,
-      assetUrl(TUNNEL_OUTER_RING_TEXTURE_PATH),
-    );
+
+    if (!scene.textures.exists(ENERGY_PARTICLE_ATLAS_KEY)) {
+      scene.load.atlas(
+        ENERGY_PARTICLE_ATLAS_KEY,
+        assetUrl(ENERGY_PARTICLE_ATLAS_IMAGE_PATH),
+        assetUrl(ENERGY_PARTICLE_ATLAS_JSON_PATH),
+      );
+    }
   }
 
-  constructor(scene) {
+  constructor(scene, config = {}) {
     const centerX = scene.scale.width * 0.5;
     const centerY = scene.scale.height * 0.5;
+
+    this.scene = scene;
     this.rotationSpeed = DEFAULT_ROTATION_SPEED;
+    this.vfxConfig = { ...DEFAULT_VFX_CONFIG, ...config };
+    this.speedRatio = 0;
+    this.particleAreaRadius = TUNNEL_OUTER_RING_INNER_RADIUS_X * 0.67;
+
     this.image = scene.add
       .image(centerX, centerY, TUNNEL_OUTER_RING_TEXTURE_KEY)
       .setOrigin(0.5, 0.5)
       .setDepth(10);
+
+    this.backParticles = null;
+    this.frontParticles = null;
+    this.backEmitter = null;
+    this.frontEmitter = null;
+
+    this.createParticleLayers(centerX, centerY);
+  }
+
+  createParticleLayers(centerX, centerY) {
+    if (!this.vfxConfig.particlesEnabled || !this.scene.textures.exists(ENERGY_PARTICLE_ATLAS_KEY)) {
+      return;
+    }
+
+    this.backParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
+      frame: ENERGY_PARTICLE_FRAME_NAMES,
+      x: { min: centerX - this.particleAreaRadius, max: centerX + this.particleAreaRadius },
+      y: { min: centerY - this.particleAreaRadius * 0.78, max: centerY + this.particleAreaRadius * 0.78 },
+      alpha: { start: this.vfxConfig.glowAlpha * 0.56, end: 0 },
+      scale: { start: 0.15, end: 0.03 },
+      speed: { min: 24, max: 58 },
+      frequency: 1000 / Math.max(1, this.vfxConfig.particlesBackCount),
+      quantity: 1,
+      lifespan: { min: 520, max: 920 },
+      blendMode: 'ADD',
+      moveToX: centerX,
+      moveToY: centerY,
+    }).setDepth(8);
+
+    this.frontParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
+      frame: ENERGY_PARTICLE_FRAME_NAMES,
+      x: { min: centerX - this.particleAreaRadius * 0.9, max: centerX + this.particleAreaRadius * 0.9 },
+      y: { min: centerY - this.particleAreaRadius * 0.72, max: centerY + this.particleAreaRadius * 0.72 },
+      alpha: { start: this.vfxConfig.glowAlpha, end: 0 },
+      scale: { start: 0.25, end: 0.08 },
+      speed: { min: 62, max: 118 },
+      frequency: 1000 / Math.max(1, this.vfxConfig.particlesFrontCount),
+      quantity: 1,
+      lifespan: { min: 460, max: 760 },
+      blendMode: 'ADD',
+      moveToX: centerX,
+      moveToY: centerY,
+    }).setDepth(11);
+
+    this.backEmitter = this.backParticles?.emitters?.list?.[0] || null;
+    this.frontEmitter = this.frontParticles?.emitters?.list?.[0] || null;
   }
 
   update() {
     this.image.rotation += this.rotationSpeed;
+    this.updateParticleIntensity();
+  }
+
+  updateParticleIntensity() {
+    if (!this.vfxConfig.particlesEnabled) {
+      this.backEmitter?.stop();
+      this.frontEmitter?.stop();
+      return;
+    }
+
+    const spawnBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.32 : 1;
+    const speedBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.28 : 1;
+    const speedMultiplier = this.vfxConfig.particleSpeedMultiplier * speedBoost;
+    const safeBackRate = Math.max(1, this.vfxConfig.particlesBackCount * spawnBoost);
+    const safeFrontRate = Math.max(1, this.vfxConfig.particlesFrontCount * spawnBoost);
+
+    if (this.backEmitter) {
+      this.backEmitter.start();
+      this.backEmitter.setFrequency(1000 / safeBackRate);
+      this.backEmitter.setSpeed({ min: 24 * speedMultiplier, max: 58 * speedMultiplier });
+    }
+
+    if (this.frontEmitter) {
+      this.frontEmitter.start();
+      this.frontEmitter.setFrequency(1000 / safeFrontRate);
+      this.frontEmitter.setSpeed({ min: 62 * speedMultiplier, max: 118 * speedMultiplier });
+    }
+  }
+
+  applySnapshot(snapshot) {
+    const tubeSpeed = snapshot?.tube?.speed;
+    if (!Number.isFinite(tubeSpeed)) {
+      this.speedRatio = 0;
+      return;
+    }
+
+    const speedMin = Number.isFinite(this.vfxConfig.speedMin) ? this.vfxConfig.speedMin : 0.01;
+    const speedMax = Number.isFinite(this.vfxConfig.speedMax) ? this.vfxConfig.speedMax : 0.25;
+    const denominator = Math.max(0.0001, speedMax - speedMin);
+    this.speedRatio = clamp((tubeSpeed - speedMin) / denominator, 0, 1);
   }
 
   setRotationSpeed(speed) {
@@ -71,12 +186,27 @@ class TunnelOuterRing {
   }
 
   resize(width, height) {
-    this.image.setPosition(width * 0.5, height * 0.5);
+    const centerX = width * 0.5;
+    const centerY = height * 0.5;
+    this.image.setPosition(centerX, centerY);
+
+    this.backParticles?.destroy();
+    this.frontParticles?.destroy();
+    this.backParticles = null;
+    this.frontParticles = null;
+    this.backEmitter = null;
+    this.frontEmitter = null;
+    this.createParticleLayers(centerX, centerY);
+
     return this;
   }
 
   destroy() {
+    this.backParticles?.destroy();
+    this.frontParticles?.destroy();
     this.image?.destroy();
+    this.backParticles = null;
+    this.frontParticles = null;
     this.image = null;
   }
 }

@@ -82,7 +82,7 @@
     }
   },
   "meta": {
-    "image": "energy_particles_spritesheet.webp",
+    "image": "energy_particles_no_bg.webp",
     "size": {
       "w": 1024,
       "h": 1024

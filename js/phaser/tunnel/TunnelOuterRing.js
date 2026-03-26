@@ -25,6 +25,9 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 
 const PARTICLE_EDGE_FADE_START = 0.64;
 const PARTICLE_EDGE_FADE_POWER = 1.8;
+const PARTICLE_WALL_BAND_INNER = 0.74;
+const PARTICLE_WALL_BAND_OUTER = 0.97;
+const PARTICLE_PERIODIC_SWAY_MS = 1200;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -109,34 +112,49 @@ class TunnelOuterRing {
     const backAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.56);
     const frontAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha);
 
+    const sideSpawnX = () => {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const minBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_INNER;
+      const maxBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_OUTER;
+      return side * (minBand + Math.random() * (maxBand - minBand));
+    };
+
     this.backParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: -this.particleAreaRadiusX, max: this.particleAreaRadiusX },
-      y: { min: -this.particleAreaRadiusY, max: this.particleAreaRadiusY },
+      x: { onEmit: sideSpawnX },
+      y: { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
       alpha: backAlpha,
-      scale: { start: 0.15, end: 0.03 },
-      speed: { min: 24, max: 58 },
-      frequency: 1000 / Math.max(1, this.vfxConfig.particlesBackCount),
+      scale: { start: 0.14, end: 0.035 },
+      speedX: {
+        onEmit: (particle) => {
+          const direction = particle.x >= 0 ? -1 : 1;
+          return direction * (18 + Math.random() * 18);
+        },
+      },
+      speedY: { min: -16, max: 16 },
+      frequency: 1000 / Math.max(1, this.vfxConfig.particlesBackCount * 1.2),
       quantity: 1,
-      lifespan: { min: 520, max: 920 },
+      lifespan: { min: 780, max: 1280 },
       blendMode: 'ADD',
-      moveToX: 0,
-      moveToY: 0,
     }).setDepth(8).setPosition(centerX, centerY);
 
     this.frontParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: -this.particleAreaRadiusX * 0.9, max: this.particleAreaRadiusX * 0.9 },
-      y: { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
+      x: { onEmit: sideSpawnX },
+      y: { min: -this.particleAreaRadiusY * 0.86, max: this.particleAreaRadiusY * 0.86 },
       alpha: frontAlpha,
-      scale: { start: 0.25, end: 0.08 },
-      speed: { min: 62, max: 118 },
-      frequency: 1000 / Math.max(1, this.vfxConfig.particlesFrontCount),
+      scale: { start: 0.22, end: 0.09 },
+      speedX: {
+        onEmit: (particle) => {
+          const direction = particle.x >= 0 ? -1 : 1;
+          return direction * (26 + Math.random() * 26);
+        },
+      },
+      speedY: { min: -20, max: 20 },
+      frequency: 1000 / Math.max(1, this.vfxConfig.particlesFrontCount * 1.35),
       quantity: 1,
-      lifespan: { min: 460, max: 760 },
+      lifespan: { min: 700, max: 1140 },
       blendMode: 'ADD',
-      moveToX: 0,
-      moveToY: 0,
     }).setDepth(11).setPosition(centerX, centerY);
 
     this.backEmitter = this.backParticles || null;
@@ -158,51 +176,52 @@ class TunnelOuterRing {
     const spawnBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.32 : 1;
     const speedBoost = this.vfxConfig.tieToGameSpeed ? 1 + this.speedRatio * 0.28 : 1;
     const speedMultiplier = this.vfxConfig.particleSpeedMultiplier * speedBoost;
-    const safeBackRate = Math.max(1, this.vfxConfig.particlesBackCount * spawnBoost);
-    const safeFrontRate = Math.max(1, this.vfxConfig.particlesFrontCount * spawnBoost);
+    const pulse = 1 + 0.35 * (0.5 + 0.5 * Math.sin(this.scene.time.now / PARTICLE_PERIODIC_SWAY_MS));
+    const safeBackRate = Math.max(1, this.vfxConfig.particlesBackCount * spawnBoost * 1.2 * pulse);
+    const safeFrontRate = Math.max(1, this.vfxConfig.particlesFrontCount * spawnBoost * 1.35 * pulse);
 
     if (this.backEmitter) {
       this.backEmitter.start();
       this.backEmitter.setFrequency(1000 / safeBackRate);
-      this.setEmitterSpeed(this.backEmitter, 24 * speedMultiplier, 58 * speedMultiplier);
+      this.setEmitterVelocity(this.backEmitter, 18 * speedMultiplier, 36 * speedMultiplier, 16 * speedMultiplier);
     }
 
     if (this.frontEmitter) {
       this.frontEmitter.start();
       this.frontEmitter.setFrequency(1000 / safeFrontRate);
-      this.setEmitterSpeed(this.frontEmitter, 62 * speedMultiplier, 118 * speedMultiplier);
+      this.setEmitterVelocity(this.frontEmitter, 26 * speedMultiplier, 52 * speedMultiplier, 20 * speedMultiplier);
     }
   }
 
-  setEmitterSpeed(emitter, min, max) {
+  setEmitterVelocity(emitter, minXAbs, maxXAbs, maxYAbs) {
     if (!emitter) {
       return;
     }
 
-    if (typeof emitter.setSpeed === 'function') {
-      emitter.setSpeed({ min, max });
-      return;
+    if (typeof emitter.setSpeedX === 'function') {
+      emitter.setSpeedX({
+        onEmit: (particle) => {
+          const direction = particle.x >= 0 ? -1 : 1;
+          return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
+        },
+      });
     }
 
-    if (typeof emitter.setParticleSpeed === 'function') {
-      emitter.setParticleSpeed(min, max);
-      return;
-    }
-
-    if (typeof emitter.setSpeedX === 'function' && typeof emitter.setSpeedY === 'function') {
-      emitter.setSpeedX({ min, max });
-      emitter.setSpeedY({ min, max });
+    if (typeof emitter.setSpeedY === 'function') {
+      emitter.setSpeedY({ min: -maxYAbs, max: maxYAbs });
       return;
     }
 
     if (typeof emitter.speedX === 'object' && emitter.speedX !== null) {
-      emitter.speedX.min = min;
-      emitter.speedX.max = max;
+      emitter.speedX.onEmit = (particle) => {
+        const direction = particle.x >= 0 ? -1 : 1;
+        return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
+      };
     }
 
     if (typeof emitter.speedY === 'object' && emitter.speedY !== null) {
-      emitter.speedY.min = min;
-      emitter.speedY.max = max;
+      emitter.speedY.min = -maxYAbs;
+      emitter.speedY.max = maxYAbs;
     }
   }
 

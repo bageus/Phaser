@@ -48,8 +48,8 @@ class MainSceneController {
     this.tunnelRenderer?.resize();
   }
 
-  handleUpdate(_time, delta) {
-    this.tunnelOuterRing?.update(delta);
+  handleUpdate() {
+    this.tunnelOuterRing?.update();
   }
 
   applySnapshot(snapshot) {

@@ -158,13 +158,45 @@ class TunnelOuterRing {
     if (this.backEmitter) {
       this.backEmitter.start();
       this.backEmitter.setFrequency(1000 / safeBackRate);
-      this.backEmitter.setSpeed({ min: 24 * speedMultiplier, max: 58 * speedMultiplier });
+      this.setEmitterSpeed(this.backEmitter, 24 * speedMultiplier, 58 * speedMultiplier);
     }
 
     if (this.frontEmitter) {
       this.frontEmitter.start();
       this.frontEmitter.setFrequency(1000 / safeFrontRate);
-      this.frontEmitter.setSpeed({ min: 62 * speedMultiplier, max: 118 * speedMultiplier });
+      this.setEmitterSpeed(this.frontEmitter, 62 * speedMultiplier, 118 * speedMultiplier);
+    }
+  }
+
+  setEmitterSpeed(emitter, min, max) {
+    if (!emitter) {
+      return;
+    }
+
+    if (typeof emitter.setSpeed === 'function') {
+      emitter.setSpeed({ min, max });
+      return;
+    }
+
+    if (typeof emitter.setParticleSpeed === 'function') {
+      emitter.setParticleSpeed(min, max);
+      return;
+    }
+
+    if (typeof emitter.setSpeedX === 'function' && typeof emitter.setSpeedY === 'function') {
+      emitter.setSpeedX({ min, max });
+      emitter.setSpeedY({ min, max });
+      return;
+    }
+
+    if (typeof emitter.speedX === 'object' && emitter.speedX !== null) {
+      emitter.speedX.min = min;
+      emitter.speedX.max = max;
+    }
+
+    if (typeof emitter.speedY === 'object' && emitter.speedY !== null) {
+      emitter.speedY.min = min;
+      emitter.speedY.max = max;
     }
   }
 

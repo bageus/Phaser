@@ -30,7 +30,7 @@ const CONFIG = {
   SPEED_INCREMENT_BOOST_MULTIPLIER: 2,
   SPEED_BONUS_AMOUNT: 0.004,
 
-  TUBE_SEGMENTS: 22,
+  TUBE_SEGMENTS: 28,
   TUBE_DEPTH_STEPS: 86,
   TUBE_Z_STEP: 0.086,
   BASE_ROTATION_SPEED: 1.2,
@@ -64,7 +64,7 @@ const CONFIG = {
 // Mobile detection — reduce tube polygon count for performance
 const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || (window.innerWidth < 600);
 if (isMobile) {
-  CONFIG.TUBE_SEGMENTS = 13;
+  CONFIG.TUBE_SEGMENTS = 16;
   CONFIG.TUBE_DEPTH_STEPS = 48;
 }
 

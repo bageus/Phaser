@@ -27,13 +27,20 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
 const DEBUG_SPRITE_SIZE = 72;
+=======
+const DEBUG_SPRITE_SIZE = 96;
+>>>>>>> main
 const DEBUG_PULSE_PERIOD_MS = 1200;
 const DEBUG_ALPHA_FRONT_MULTIPLIER = 1.08;
 const DEBUG_ALPHA_BACK_MULTIPLIER = 0.82;
 const DEBUG_MIN_LIFESPAN_MS = 900;
 const DEBUG_MAX_LIFESPAN_MS = 1800;
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
 const LEFT_ONLY_TEXTURE_KEY = 'energy_effect.webp';
+=======
+>>>>>>> main
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -85,7 +92,10 @@ class TunnelOuterRing {
     this.frontEmitters = [];
     this.debugSprites = [];
     this.debugSpriteMeta = [];
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
     this.activeParticleTextureKeys = [];
+=======
+>>>>>>> main
 
     this.createParticleLayers(centerX, centerY);
   }
@@ -112,6 +122,7 @@ class TunnelOuterRing {
         .setBlendMode('NORMAL')
     ));
 
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
     const randomPointInTube = () => {
       const angle = randomRange(0, Math.PI * 2);
       const radius = Math.sqrt(Math.random());
@@ -153,6 +164,59 @@ class TunnelOuterRing {
     this.backParticles = this.debugSprites.filter((_, index) => index < backCount);
     this.frontParticles = this.debugSprites.filter((_, index) => index >= backCount);
 
+=======
+    const backCount = clamp(Math.round(this.vfxConfig.particlesBackCount * 0.3), 8, 22);
+    const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.3), 10, 28);
+    const totalCount = backCount + frontCount;
+    const seedTexture = particleTextureKeys[0];
+
+    this.debugSprites = Array.from({ length: totalCount }, () => (
+      this.scene.add
+        .sprite(centerX, centerY, seedTexture)
+        .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
+        .setBlendMode('NORMAL')
+    ));
+
+    const randomPointInTube = () => {
+      const angle = randomRange(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random());
+      return {
+        x: centerX + Math.cos(angle) * this.particleAreaRadiusX * 0.56 * radius,
+        y: centerY + Math.sin(angle) * this.particleAreaRadiusY * 0.52 * radius,
+      };
+    };
+
+    const createMeta = (isFront) => {
+      const spawn = randomPointInTube();
+      const angle = randomRange(0, Math.PI * 2);
+      return {
+        isFront,
+        phase: randomRange(0, Math.PI * 2),
+        ageMs: randomRange(0, DEBUG_MAX_LIFESPAN_MS),
+        lifeMs: randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS),
+        baseScale: randomRange(0.76, 1.18),
+        velocityX: Math.cos(angle) * randomRange(8, 26),
+        velocityY: Math.sin(angle) * randomRange(8, 24),
+        x: spawn.x,
+        y: spawn.y,
+      };
+    };
+
+    this.debugSpriteMeta = this.debugSprites.map((sprite, index) => {
+      const isFront = index >= backCount;
+      const meta = createMeta(isFront);
+      const textureForSprite = particleTextureKeys[Math.floor(Math.random() * particleTextureKeys.length)];
+      sprite
+        .setTexture(textureForSprite)
+        .setDepth(isFront ? PARTICLE_DEPTH_FRONT : PARTICLE_DEPTH_BACK)
+        .setPosition(meta.x, meta.y);
+      return meta;
+    });
+
+    this.backParticles = this.debugSprites.filter((_, index) => index < backCount);
+    this.frontParticles = this.debugSprites.filter((_, index) => index >= backCount);
+
+>>>>>>> main
     this.backEmitters = [];
     this.frontEmitters = [];
     this.ensureParticlesOnTop();
@@ -204,15 +268,21 @@ class TunnelOuterRing {
         const angle = randomRange(0, Math.PI * 2);
         meta.ageMs = 0;
         meta.lifeMs = randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS);
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
         meta.baseScale = randomRange(0.66, 1);
         meta.phase = randomRange(0, Math.PI * 2);
         meta.textureKey = this.activeParticleTextureKeys[
           Math.floor(Math.random() * this.activeParticleTextureKeys.length)
         ] || meta.textureKey;
+=======
+        meta.baseScale = randomRange(0.76, 1.18);
+        meta.phase = randomRange(0, Math.PI * 2);
+>>>>>>> main
         meta.x = this.particleCenterX + Math.cos(angle) * this.particleAreaRadiusX * randomRange(0.12, 0.58);
         meta.y = this.particleCenterY + Math.sin(angle) * this.particleAreaRadiusY * randomRange(0.12, 0.56);
         meta.velocityX = Math.cos(angle) * randomRange(8, 26);
         meta.velocityY = Math.sin(angle) * randomRange(8, 24);
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
         sprite.setTexture(meta.textureKey);
       }
 
@@ -248,6 +318,31 @@ class TunnelOuterRing {
     const isRightSide = meta.x >= this.particleCenterX;
     const shouldMirrorOnRight = meta.textureKey === LEFT_ONLY_TEXTURE_KEY && isRightSide;
     sprite.setFlipX(Boolean(shouldMirrorOnRight));
+=======
+      }
+
+      meta.x += meta.velocityX * speedMultiplier * step;
+      meta.y += meta.velocityY * speedMultiplier * step;
+
+      const dx = (meta.x - this.particleCenterX) / Math.max(1, this.particleAreaRadiusX * 0.62);
+      const dy = (meta.y - this.particleCenterY) / Math.max(1, this.particleAreaRadiusY * 0.62);
+      const outside = (dx * dx + dy * dy) > 1;
+      if (outside) {
+        meta.ageMs = meta.lifeMs + 1;
+      }
+
+      const lifeRatio = 1 - Math.abs((meta.ageMs / meta.lifeMs) * 2 - 1);
+      const layerAlpha = alphaBase
+        * (meta.isFront ? DEBUG_ALPHA_FRONT_MULTIPLIER : DEBUG_ALPHA_BACK_MULTIPLIER)
+        * (0.84 + pulse * 0.24)
+        * (0.55 + lifeRatio * 0.55);
+      sprite.setAlpha(clamp(layerAlpha, 0.2, 0.74));
+      sprite.setScale(targetScale * meta.baseScale);
+      sprite.x = meta.x;
+      sprite.y = meta.y;
+      sprite.rotation = (0.03 + speedBoost * 0.08) * Math.sin((now / (960 / speedMultiplier)) + meta.phase);
+    });
+>>>>>>> main
   }
 
   applySnapshot(snapshot) {
@@ -303,7 +398,10 @@ class TunnelOuterRing {
     this.frontEmitters = [];
     this.debugSprites = [];
     this.debugSpriteMeta = [];
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
     this.activeParticleTextureKeys = [];
+=======
+>>>>>>> main
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -324,7 +422,10 @@ class TunnelOuterRing {
     this.frontEmitters = [];
     this.debugSprites = [];
     this.debugSpriteMeta = [];
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
     this.activeParticleTextureKeys = [];
+=======
+>>>>>>> main
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -340,7 +441,10 @@ class TunnelOuterRing {
     this.frontEmitters = [];
     this.debugSprites = [];
     this.debugSpriteMeta = [];
+<<<<<<< codex/disable-emission-and-texture-parameters-k75oz9
     this.activeParticleTextureKeys = [];
+=======
+>>>>>>> main
     this.image = null;
   }
 }

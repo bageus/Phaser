@@ -103,7 +103,7 @@ class TunnelOuterRing {
     const backAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.56);
     const frontAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha);
 
-    this.backParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
+    this.backParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
       x: { min: centerX - this.particleAreaRadiusX, max: centerX + this.particleAreaRadiusX },
       y: { min: centerY - this.particleAreaRadiusY, max: centerY + this.particleAreaRadiusY },
@@ -118,7 +118,7 @@ class TunnelOuterRing {
       moveToY: centerY,
     }).setDepth(8);
 
-    this.frontParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
+    this.frontParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
       x: { min: centerX - this.particleAreaRadiusX * 0.9, max: centerX + this.particleAreaRadiusX * 0.9 },
       y: { min: centerY - this.particleAreaRadiusY * 0.9, max: centerY + this.particleAreaRadiusY * 0.9 },

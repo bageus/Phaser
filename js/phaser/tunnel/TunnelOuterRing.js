@@ -23,6 +23,9 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
   speedMax: 0.25,
 });
 
+const PARTICLE_EDGE_FADE_START = 0.64;
+const PARTICLE_EDGE_FADE_POWER = 1.8;
+
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
   return `${normalizedBase}${path}`;
@@ -55,7 +58,10 @@ class TunnelOuterRing {
     this.rotationSpeed = DEFAULT_ROTATION_SPEED;
     this.vfxConfig = { ...DEFAULT_VFX_CONFIG, ...config };
     this.speedRatio = 0;
-    this.particleAreaRadius = TUNNEL_OUTER_RING_INNER_RADIUS_X * 0.67;
+    this.particleAreaRadiusX = TUNNEL_OUTER_RING_INNER_RADIUS_X * 0.67;
+    this.particleAreaRadiusY = TUNNEL_OUTER_RING_INNER_RADIUS_Y * 0.52;
+    this.particleCenterX = centerX;
+    this.particleCenterY = centerY;
 
     this.image = scene.add
       .image(centerX, centerY, TUNNEL_OUTER_RING_TEXTURE_KEY)
@@ -70,16 +76,38 @@ class TunnelOuterRing {
     this.createParticleLayers(centerX, centerY);
   }
 
+  createParticleAlphaConfig(baseAlpha) {
+    const centerX = this.particleCenterX;
+    const centerY = this.particleCenterY;
+    const radiusX = Math.max(1, this.particleAreaRadiusX);
+    const radiusY = Math.max(1, this.particleAreaRadiusY);
+
+    return {
+      onEmit: (particle) => {
+        const normalizedX = (particle.x - centerX) / radiusX;
+        const normalizedY = (particle.y - centerY) / radiusY;
+        const radialDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+        const edgeProgress = clamp((radialDistance - PARTICLE_EDGE_FADE_START) / (1 - PARTICLE_EDGE_FADE_START), 0, 1);
+        const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
+        return baseAlpha * clamp(edgeFade, 0.08, 1);
+      },
+      onUpdate: (particle, key, value, t) => value * (1 - t),
+    };
+  }
+
   createParticleLayers(centerX, centerY) {
     if (!this.vfxConfig.particlesEnabled || !this.scene.textures.exists(ENERGY_PARTICLE_ATLAS_KEY)) {
       return;
     }
 
+    const backAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.56);
+    const frontAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha);
+
     this.backParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: centerX - this.particleAreaRadius, max: centerX + this.particleAreaRadius },
-      y: { min: centerY - this.particleAreaRadius * 0.78, max: centerY + this.particleAreaRadius * 0.78 },
-      alpha: { start: this.vfxConfig.glowAlpha * 0.56, end: 0 },
+      x: { min: centerX - this.particleAreaRadiusX, max: centerX + this.particleAreaRadiusX },
+      y: { min: centerY - this.particleAreaRadiusY, max: centerY + this.particleAreaRadiusY },
+      alpha: backAlpha,
       scale: { start: 0.15, end: 0.03 },
       speed: { min: 24, max: 58 },
       frequency: 1000 / Math.max(1, this.vfxConfig.particlesBackCount),
@@ -92,9 +120,9 @@ class TunnelOuterRing {
 
     this.frontParticles = this.scene.add.particles(centerX, centerY, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: centerX - this.particleAreaRadius * 0.9, max: centerX + this.particleAreaRadius * 0.9 },
-      y: { min: centerY - this.particleAreaRadius * 0.72, max: centerY + this.particleAreaRadius * 0.72 },
-      alpha: { start: this.vfxConfig.glowAlpha, end: 0 },
+      x: { min: centerX - this.particleAreaRadiusX * 0.9, max: centerX + this.particleAreaRadiusX * 0.9 },
+      y: { min: centerY - this.particleAreaRadiusY * 0.9, max: centerY + this.particleAreaRadiusY * 0.9 },
+      alpha: frontAlpha,
       scale: { start: 0.25, end: 0.08 },
       speed: { min: 62, max: 118 },
       frequency: 1000 / Math.max(1, this.vfxConfig.particlesFrontCount),
@@ -105,8 +133,8 @@ class TunnelOuterRing {
       moveToY: centerY,
     }).setDepth(11);
 
-    this.backEmitter = this.backParticles?.emitters?.list?.[0] || null;
-    this.frontEmitter = this.frontParticles?.emitters?.list?.[0] || null;
+    this.backEmitter = this.backParticles || null;
+    this.frontEmitter = this.frontParticles || null;
   }
 
   update() {
@@ -182,12 +210,25 @@ class TunnelOuterRing {
       TUNNEL_OUTER_RING_FIT_SCALE;
 
     this.image.setDisplaySize(targetWidth, targetHeight);
+
+    this.particleAreaRadiusX = tubeRadiusX * 0.95;
+    this.particleAreaRadiusY = tubeRadiusY * 0.74;
+    this.backParticles?.destroy();
+    this.frontParticles?.destroy();
+    this.backParticles = null;
+    this.frontParticles = null;
+    this.backEmitter = null;
+    this.frontEmitter = null;
+    this.createParticleLayers(this.particleCenterX, this.particleCenterY);
+
     return this;
   }
 
   resize(width, height) {
     const centerX = width * 0.5;
     const centerY = height * 0.5;
+    this.particleCenterX = centerX;
+    this.particleCenterY = centerY;
     this.image.setPosition(centerX, centerY);
 
     this.backParticles?.destroy();

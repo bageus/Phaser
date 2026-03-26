@@ -105,8 +105,8 @@ class TunnelOuterRing {
 
     this.backParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: centerX - this.particleAreaRadiusX, max: centerX + this.particleAreaRadiusX },
-      y: { min: centerY - this.particleAreaRadiusY, max: centerY + this.particleAreaRadiusY },
+      x: { min: -this.particleAreaRadiusX, max: this.particleAreaRadiusX },
+      y: { min: -this.particleAreaRadiusY, max: this.particleAreaRadiusY },
       alpha: backAlpha,
       scale: { start: 0.15, end: 0.03 },
       speed: { min: 24, max: 58 },
@@ -114,14 +114,14 @@ class TunnelOuterRing {
       quantity: 1,
       lifespan: { min: 520, max: 920 },
       blendMode: 'ADD',
-      moveToX: centerX,
-      moveToY: centerY,
+      moveToX: 0,
+      moveToY: 0,
     }).setDepth(8);
 
     this.frontParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
-      x: { min: centerX - this.particleAreaRadiusX * 0.9, max: centerX + this.particleAreaRadiusX * 0.9 },
-      y: { min: centerY - this.particleAreaRadiusY * 0.9, max: centerY + this.particleAreaRadiusY * 0.9 },
+      x: { min: -this.particleAreaRadiusX * 0.9, max: this.particleAreaRadiusX * 0.9 },
+      y: { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
       alpha: frontAlpha,
       scale: { start: 0.25, end: 0.08 },
       speed: { min: 62, max: 118 },
@@ -129,8 +129,8 @@ class TunnelOuterRing {
       quantity: 1,
       lifespan: { min: 460, max: 760 },
       blendMode: 'ADD',
-      moveToX: centerX,
-      moveToY: centerY,
+      moveToX: 0,
+      moveToY: 0,
     }).setDepth(11);
 
     this.backEmitter = this.backParticles || null;

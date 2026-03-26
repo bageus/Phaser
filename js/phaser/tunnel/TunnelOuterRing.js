@@ -84,8 +84,14 @@ class TunnelOuterRing {
 
     return {
       onEmit: (particle) => {
-        const normalizedX = (particle.x - centerX) / radiusX;
-        const normalizedY = (particle.y - centerY) / radiusY;
+        const relativeX = Math.abs(particle.x - centerX) < Math.abs(particle.x)
+          ? particle.x - centerX
+          : particle.x;
+        const relativeY = Math.abs(particle.y - centerY) < Math.abs(particle.y)
+          ? particle.y - centerY
+          : particle.y;
+        const normalizedX = relativeX / radiusX;
+        const normalizedY = relativeY / radiusY;
         const radialDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
         const edgeProgress = clamp((radialDistance - PARTICLE_EDGE_FADE_START) / (1 - PARTICLE_EDGE_FADE_START), 0, 1);
         const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
@@ -116,7 +122,7 @@ class TunnelOuterRing {
       blendMode: 'ADD',
       moveToX: 0,
       moveToY: 0,
-    }).setDepth(8);
+    }).setDepth(8).setPosition(centerX, centerY);
 
     this.frontParticles = this.scene.add.particles(0, 0, ENERGY_PARTICLE_ATLAS_KEY, {
       frame: ENERGY_PARTICLE_FRAME_NAMES,
@@ -131,7 +137,7 @@ class TunnelOuterRing {
       blendMode: 'ADD',
       moveToX: 0,
       moveToY: 0,
-    }).setDepth(11);
+    }).setDepth(11).setPosition(centerX, centerY);
 
     this.backEmitter = this.backParticles || null;
     this.frontEmitter = this.frontParticles || null;

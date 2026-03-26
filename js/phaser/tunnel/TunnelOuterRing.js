@@ -30,8 +30,8 @@ const PARTICLE_EDGE_FADE_POWER = 1.8;
 const PARTICLE_WALL_BAND_INNER = 0.74;
 const PARTICLE_WALL_BAND_OUTER = 0.97;
 const PARTICLE_PERIODIC_SWAY_MS = 1200;
-const PARTICLE_DEPTH_BACK = 11;
-const PARTICLE_DEPTH_FRONT = 12;
+const PARTICLE_DEPTH_BACK = 30;
+const PARTICLE_DEPTH_FRONT = 31;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -179,10 +179,26 @@ class TunnelOuterRing {
 
     this.backEmitters = [...this.backParticles];
     this.frontEmitters = [...this.frontParticles];
+    this.ensureParticlesOnTop();
+  }
+
+  ensureParticlesOnTop() {
+    const allParticleLayers = [
+      ...(this.backParticles || []),
+      ...(this.frontParticles || []),
+    ];
+
+    allParticleLayers.forEach((layer) => {
+      if (!layer) {
+        return;
+      }
+      this.scene.children.bringToTop(layer);
+    });
   }
 
   update() {
     this.image.rotation += this.rotationSpeed;
+    this.ensureParticlesOnTop();
     this.updateParticleIntensity();
   }
 

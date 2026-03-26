@@ -10,6 +10,16 @@ const TRACK_SLAT_LENGTH = 0.82;
 const TRACK_SLAT_SOFTNESS = 0.22;
 const LAMP_BRIGHTNESS_MULTIPLIER = 100;
 const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
+const GRID_ALPHA_MULTIPLIER = 0.2;
+const GRID_DIM_ALPHA_RATIO = 0.24;
+const GRID_COLOR_NEAR = 0xc7e6ff;
+const GRID_COLOR_FAR = 0x6ea8dd;
+const GRID_RADIAL_LINE_WIDTH = 1.05;
+const GRID_RING_LINE_WIDTH = 0.85;
+const GRID_PULSE_CYCLE_MS = 8000;
+const GRID_FADE_OUT_MS = 3000;
+const GRID_DIM_HOLD_MS = 2000;
+const GRID_FADE_IN_MS = 3000;
 const SPAWNED_RING_ALPHA_MULTIPLIER = 0.14;
 const MOUTH_RING_ALPHA_MULTIPLIER = 0.4;
 const WAVE_BASE_ALPHA_CAP = 0.26;
@@ -152,6 +162,18 @@ function drawTunnelDarkeningOverlay(graphics, quad, depthRatio, segmentMidAngle,
 
   graphics.fillStyle(0x000000, darkeningAlpha);
   fillQuad(graphics, quad);
+}
+
+function getGridPulseAlpha(timeMs) {
+  const cycleTime = ((timeMs % GRID_PULSE_CYCLE_MS) + GRID_PULSE_CYCLE_MS) % GRID_PULSE_CYCLE_MS;
+  if (cycleTime < GRID_FADE_OUT_MS) {
+    return lerp(1, GRID_DIM_ALPHA_RATIO, cycleTime / GRID_FADE_OUT_MS);
+  }
+  if (cycleTime < GRID_FADE_OUT_MS + GRID_DIM_HOLD_MS) {
+    return GRID_DIM_ALPHA_RATIO;
+  }
+  const fadeInProgress = (cycleTime - GRID_FADE_OUT_MS - GRID_DIM_HOLD_MS) / GRID_FADE_IN_MS;
+  return lerp(GRID_DIM_ALPHA_RATIO, 1, clamp(fadeInProgress, 0, 1));
 }
 
 function drawSegmentGlintOverlay(graphics, quad, segmentMidAngle, tubeRotation, depthRatio, spawnBlend) {
@@ -354,6 +376,9 @@ class TunnelRenderer {
       : [];
     const lampPulseHalfWidth = Math.max(quality.depthStep * 1.5, 0.9);
     const depthEntries = [];
+    const gridPulseAlpha = getGridPulseAlpha(this.scene.time.now || 0);
+    const gridRingOverlays = [];
+    const gridRadialOverlays = [];
 
     for (let depth = 0; depth < maxDepth; depth += quality.depthStep) {
       let animatedDepth = depth - ringPhase;
@@ -455,6 +480,25 @@ class TunnelRenderer {
           p4: { x: x4, y: y4 },
         }, segmentMidAngle, renderTube.rotation, depthRatio, spawnBlend);
 
+        if (spawnBlend > 0.02) {
+          gridRadialOverlays.push({
+            x1,
+            y1,
+            x4,
+            y4,
+            depthRatio,
+            spawnBlend,
+          });
+          gridRingOverlays.push({
+            x1,
+            y1,
+            x2,
+            y2,
+            depthRatio,
+            spawnBlend,
+          });
+        }
+
         if (trackCoverage > 0) {
           const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
           const slatVisibility = 1 - clamp((treadPhase - TRACK_SLAT_LENGTH) / TRACK_SLAT_SOFTNESS, 0, 1);
@@ -503,6 +547,34 @@ class TunnelRenderer {
         slat.y4,
       );
       this.lightGraphics.fillPath();
+    }
+
+    for (const line of gridRingOverlays) {
+      const ringColor = blendColor(GRID_COLOR_FAR, GRID_COLOR_NEAR, line.depthRatio * 0.8);
+      const ringAlpha = amplifiedAlpha(
+        clamp((0.02 + line.depthRatio * 0.07) * line.spawnBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.2),
+        0.25,
+      );
+      if (ringAlpha <= 0.002) continue;
+      this.lightGraphics.lineStyle(GRID_RING_LINE_WIDTH, ringColor, ringAlpha);
+      this.lightGraphics.beginPath();
+      this.lightGraphics.moveTo(line.x1, line.y1);
+      this.lightGraphics.lineTo(line.x2, line.y2);
+      this.lightGraphics.strokePath();
+    }
+
+    for (const line of gridRadialOverlays) {
+      const radialColor = blendColor(GRID_COLOR_FAR, GRID_COLOR_NEAR, line.depthRatio * 0.7);
+      const radialAlpha = amplifiedAlpha(
+        clamp((0.03 + line.depthRatio * 0.09) * line.spawnBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.22),
+        0.28,
+      );
+      if (radialAlpha <= 0.002) continue;
+      this.lightGraphics.lineStyle(GRID_RADIAL_LINE_WIDTH, radialColor, radialAlpha);
+      this.lightGraphics.beginPath();
+      this.lightGraphics.moveTo(line.x1, line.y1);
+      this.lightGraphics.lineTo(line.x4, line.y4);
+      this.lightGraphics.strokePath();
     }
 
     this.drawMouthRing(centerX, centerY, renderTube);

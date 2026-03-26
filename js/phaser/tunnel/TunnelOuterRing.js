@@ -19,7 +19,7 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
   particlesBackCount: 40,
   particlesFrontCount: 54,
   particleSpeedMultiplier: 1,
-  glowAlpha: 0.18,
+  glowAlpha: 0.42,
   tieToGameSpeed: true,
   speedMin: 0.01,
   speedMax: 0.25,
@@ -82,7 +82,7 @@ class TunnelOuterRing {
   }
 
   createParticleAlphaConfig(baseAlpha) {
-    const safeAlpha = clamp(baseAlpha, 0.22, 0.95);
+    const safeAlpha = clamp(baseAlpha, 0.38, 0.98);
     return {
       start: safeAlpha,
       end: 0,
@@ -128,7 +128,7 @@ class TunnelOuterRing {
         },
         speedY: { min: -maxY, max: maxY },
         frequency,
-        quantity: 1,
+        quantity: 2,
         lifespan,
         blendMode: 'ADD',
       }).setDepth(depth)
@@ -143,12 +143,12 @@ class TunnelOuterRing {
     this.backParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
       textureKey,
       backAlpha,
-      { start: 0.14, end: 0.035 },
-      18,
-      36,
-      16,
+      { start: 0.24, end: 0.08 },
+      6,
+      14,
+      8,
       perTextureBackFrequency,
-      { min: 780, max: 1280 },
+      { min: 1400, max: 2200 },
       PARTICLE_DEPTH_BACK,
       { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
     ));
@@ -156,12 +156,12 @@ class TunnelOuterRing {
     this.frontParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
       textureKey,
       frontAlpha,
-      { start: 0.22, end: 0.09 },
-      26,
-      52,
+      { start: 0.34, end: 0.12 },
+      10,
       20,
+      10,
       perTextureFrontFrequency,
-      { min: 700, max: 1140 },
+      { min: 1200, max: 1900 },
       PARTICLE_DEPTH_FRONT,
       { min: -this.particleAreaRadiusY * 0.86, max: this.particleAreaRadiusY * 0.86 },
     ));
@@ -215,7 +215,7 @@ class TunnelOuterRing {
         emitter.start();
       }
       emitter.setFrequency(perEmitterBackFrequency);
-      this.setEmitterVelocity(emitter, 18 * speedMultiplier, 36 * speedMultiplier, 16 * speedMultiplier);
+      this.setEmitterVelocity(emitter, 6 * speedMultiplier, 14 * speedMultiplier, 8 * speedMultiplier);
     });
 
     this.frontEmitters.forEach((emitter) => {
@@ -223,7 +223,7 @@ class TunnelOuterRing {
         emitter.start();
       }
       emitter.setFrequency(perEmitterFrontFrequency);
-      this.setEmitterVelocity(emitter, 26 * speedMultiplier, 52 * speedMultiplier, 20 * speedMultiplier);
+      this.setEmitterVelocity(emitter, 10 * speedMultiplier, 20 * speedMultiplier, 10 * speedMultiplier);
     });
   }
 

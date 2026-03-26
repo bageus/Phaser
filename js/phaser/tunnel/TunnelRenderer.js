@@ -12,6 +12,8 @@ const LAMP_BRIGHTNESS_MULTIPLIER = 100;
 const TRACK_SLAT_ALPHA_MULTIPLIER = 0.16;
 const GRID_ALPHA_MULTIPLIER = 0.2;
 const GRID_DIM_ALPHA_RATIO = 0.24;
+const GRID_AMBIENT_ALPHA_FLOOR = 0.05;
+const GRID_AMBIENT_DEPTH_BOOST = 0.03;
 const GRID_COLOR_NEAR = 0xc7e6ff;
 const GRID_COLOR_FAR = 0x6ea8dd;
 const GRID_RADIAL_LINE_WIDTH = 1.05;
@@ -493,24 +495,24 @@ class TunnelRenderer {
           p4: { x: x4, y: y4 },
         }, segmentMidAngle, renderTube.rotation, depthRatio, spawnBlend);
 
-        if (spawnBlend > 0.02) {
-          gridRadialOverlays.push({
-            x1,
-            y1,
-            x4,
-            y4,
-            depthRatio,
-            spawnBlend,
-          });
-          gridRingOverlays.push({
-            x1,
-            y1,
-            x2,
-            y2,
-            depthRatio,
-            spawnBlend,
-          });
-        }
+        const ambientGridBlend = clamp(GRID_AMBIENT_ALPHA_FLOOR + depthRatio * GRID_AMBIENT_DEPTH_BOOST, 0, 0.2);
+        const gridBlend = Math.max(spawnBlend, ambientGridBlend);
+        gridRadialOverlays.push({
+          x1,
+          y1,
+          x4,
+          y4,
+          depthRatio,
+          gridBlend,
+        });
+        gridRingOverlays.push({
+          x1,
+          y1,
+          x2,
+          y2,
+          depthRatio,
+          gridBlend,
+        });
 
         if (trackCoverage > 0) {
           const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
@@ -589,7 +591,7 @@ class TunnelRenderer {
     for (const line of gridRingOverlays) {
       const ringColor = blendColor(GRID_COLOR_FAR, GRID_COLOR_NEAR, line.depthRatio * 0.8);
       const ringAlpha = amplifiedAlpha(
-        clamp((0.02 + line.depthRatio * 0.07) * line.spawnBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.2),
+        clamp((0.02 + line.depthRatio * 0.07) * line.gridBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.2),
         0.25,
       );
       if (ringAlpha <= 0.002) continue;
@@ -603,7 +605,7 @@ class TunnelRenderer {
     for (const line of gridRadialOverlays) {
       const radialColor = blendColor(GRID_COLOR_FAR, GRID_COLOR_NEAR, line.depthRatio * 0.7);
       const radialAlpha = amplifiedAlpha(
-        clamp((0.03 + line.depthRatio * 0.09) * line.spawnBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.22),
+        clamp((0.03 + line.depthRatio * 0.09) * line.gridBlend * GRID_ALPHA_MULTIPLIER * gridPulseAlpha, 0, 0.22),
         0.28,
       );
       if (radialAlpha <= 0.002) continue;

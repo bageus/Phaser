@@ -16,6 +16,12 @@ const GRID_COLOR_NEAR = 0xc7e6ff;
 const GRID_COLOR_FAR = 0x6ea8dd;
 const GRID_RADIAL_LINE_WIDTH = 1.05;
 const GRID_RING_LINE_WIDTH = 0.85;
+const SPEED_STREAK_COLORS = Object.freeze([0xff5ff5, 0xffffff, 0x51fff2]);
+const SPEED_STREAK_MIN_DEPTH_RATIO = 0.12;
+const SPEED_STREAK_MAX_DEPTH_RATIO = 0.92;
+const SPEED_STREAK_BASE_ALPHA = 0.018;
+const SPEED_STREAK_MAX_ALPHA = 0.11;
+const SPEED_STREAK_WIDTH_RATIO = 0.22;
 const GRID_PULSE_CYCLE_MS = 8000;
 const GRID_FADE_OUT_MS = 3000;
 const GRID_DIM_HOLD_MS = 2000;
@@ -194,6 +200,11 @@ function drawSegmentGlintOverlay(graphics, quad, segmentMidAngle, tubeRotation, 
   const color = blendColor(0xa8d7ff, 0xffffff, 0.55 + depthRatio * 0.35);
   graphics.fillStyle(color, alpha);
   fillQuad(graphics, getQuadBand(quad, 0.08, 0.48));
+}
+
+function hashNoise(seed) {
+  const raw = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return raw - Math.floor(raw);
 }
 
 function lerpPoint(a, b, t) {
@@ -379,6 +390,8 @@ class TunnelRenderer {
     const gridPulseAlpha = getGridPulseAlpha(this.scene.time.now || 0);
     const gridRingOverlays = [];
     const gridRadialOverlays = [];
+    const speedStreakOverlays = [];
+    const speedPulse = (this.scene.time.now || 0) * 0.0013;
 
     for (let depth = 0; depth < maxDepth; depth += quality.depthStep) {
       let animatedDepth = depth - ringPhase;
@@ -520,6 +533,30 @@ class TunnelRenderer {
           }
         }
 
+        const wallCoverage = 1 - clamp(trackCoverage, 0, 1);
+        if (wallCoverage > 0.25) {
+          const depthPhase = animatedDepth * 0.33 - scrollOffset * 1.7 + speedPulse;
+          const stripePulse = 0.5 + 0.5 * Math.sin(depthPhase);
+          const stripeGate = Math.pow(stripePulse, 7.5);
+          const segmentNoise = hashNoise(i * 13.77 + Math.floor(animatedDepth) * 0.91);
+          const depthWithinRange = depthRatio >= SPEED_STREAK_MIN_DEPTH_RATIO && depthRatio <= SPEED_STREAK_MAX_DEPTH_RATIO;
+          if (depthWithinRange && stripeGate > 0.08 && segmentNoise > 0.48) {
+            speedStreakOverlays.push({
+              quad: {
+                p1: { x: x1, y: y1 },
+                p2: { x: x2, y: y2 },
+                p3: { x: x3, y: y3 },
+                p4: { x: x4, y: y4 },
+              },
+              depthRatio,
+              spawnBlend,
+              wallCoverage,
+              colorIndex: (i + Math.floor(animatedDepth)) % SPEED_STREAK_COLORS.length,
+              streakAlpha: stripeGate,
+            });
+          }
+        }
+
       }
     }
 
@@ -575,6 +612,24 @@ class TunnelRenderer {
       this.lightGraphics.moveTo(line.x1, line.y1);
       this.lightGraphics.lineTo(line.x4, line.y4);
       this.lightGraphics.strokePath();
+    }
+
+    for (const streak of speedStreakOverlays) {
+      const widthPulse = 0.4 + 0.6 * Math.sin((streak.depthRatio + speedPulse) * 10.2);
+      const bandStart = clamp(0.5 - SPEED_STREAK_WIDTH_RATIO * widthPulse * 0.5, 0.05, 0.49);
+      const bandEnd = clamp(0.5 + SPEED_STREAK_WIDTH_RATIO * widthPulse * 0.5, 0.51, 0.95);
+      const streakColor = SPEED_STREAK_COLORS[streak.colorIndex];
+      const streakAlpha = amplifiedAlpha(clamp(
+        (SPEED_STREAK_BASE_ALPHA + streak.depthRatio * 0.035) *
+          streak.spawnBlend *
+          streak.wallCoverage *
+          streak.streakAlpha,
+        0,
+        SPEED_STREAK_MAX_ALPHA,
+      ), 0.22);
+      if (streakAlpha <= 0.002) continue;
+      this.fxGraphics.fillStyle(streakColor, streakAlpha);
+      fillQuad(this.fxGraphics, getQuadBand(streak.quad, bandStart, bandEnd));
     }
 
     this.drawMouthRing(centerX, centerY, renderTube);

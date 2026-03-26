@@ -33,11 +33,13 @@ class MainSceneController {
 
     this.tunnelRenderer = new TunnelRenderer(this.scene);
     this.tunnelRenderer.create();
-    this.tunnelOuterRing = new TunnelOuterRing(this.scene).fitToTube(CONFIG.TUBE_RADIUS, CONFIG.PLAYER_OFFSET);
+    this.tunnelOuterRing = new TunnelOuterRing(this.scene, CONFIG.ENERGY_TUBE_VFX)
+      .fitToTube(CONFIG.TUBE_RADIUS, CONFIG.PLAYER_OFFSET);
     this.entityRenderer = new EntityRenderer(this.scene);
     this.entityRenderer.create();
     this.tunnelRenderer.applySnapshot(this.snapshot);
     this.entityRenderer.applySnapshot(this.snapshot);
+    this.tunnelOuterRing?.applySnapshot(this.snapshot);
     this.scene.scale.on('resize', this.handleResize);
     this.scene.events.on('update', this.handleUpdate);
   }
@@ -48,14 +50,15 @@ class MainSceneController {
     this.tunnelRenderer?.resize();
   }
 
-  handleUpdate() {
-    this.tunnelOuterRing?.update();
+  handleUpdate(time, delta) {
+    this.tunnelOuterRing?.update(time, delta);
   }
 
   applySnapshot(snapshot) {
     this.snapshot = snapshot || null;
     this.tunnelRenderer?.applySnapshot(this.snapshot);
     this.entityRenderer?.applySnapshot(this.snapshot);
+    this.tunnelOuterRing?.applySnapshot(this.snapshot);
   }
 
   destroy() {

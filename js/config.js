@@ -58,7 +58,18 @@ const CONFIG = {
   CURVE_OFFSET_Y: 0.25,
 
   TEX_SIZE: 256,
-  TEX_PIXEL_SIZE: 8
+  TEX_PIXEL_SIZE: 8,
+
+  ENERGY_TUBE_VFX: {
+    particlesEnabled: true,
+    particlesBackCount: 40,
+    particlesFrontCount: 54,
+    particleSpeedMultiplier: 1,
+    glowAlpha: 0.18,
+    tieToGameSpeed: true,
+    speedMin: 0.01,
+    speedMax: 0.25,
+  }
 };
 
 // Mobile detection — reduce tube polygon count for performance

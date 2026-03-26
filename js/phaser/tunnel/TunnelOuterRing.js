@@ -82,23 +82,11 @@ class TunnelOuterRing {
   }
 
   createParticleAlphaConfig(baseAlpha) {
-    const centerX = this.particleCenterX;
-    const centerY = this.particleCenterY;
-    const radiusX = Math.max(1, this.particleAreaRadiusX);
-    const radiusY = Math.max(1, this.particleAreaRadiusY);
-
+    const safeAlpha = clamp(baseAlpha, 0.22, 0.95);
     return {
-      onEmit: (particle) => {
-        const relativeX = particle.x - centerX;
-        const relativeY = particle.y - centerY;
-        const normalizedX = relativeX / radiusX;
-        const normalizedY = relativeY / radiusY;
-        const radialDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
-        const edgeProgress = clamp((radialDistance - PARTICLE_EDGE_FADE_START) / (1 - PARTICLE_EDGE_FADE_START), 0, 1);
-        const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
-        return baseAlpha * clamp(edgeFade, 0.08, 1);
-      },
-      onUpdate: (particle, key, t, value) => value * (1 - t),
+      start: safeAlpha,
+      end: 0,
+      ease: 'Quad.easeOut',
     };
   }
 

@@ -82,27 +82,11 @@ class TunnelOuterRing {
   }
 
   createParticleAlphaConfig(baseAlpha) {
-    const centerX = this.particleCenterX;
-    const centerY = this.particleCenterY;
-    const radiusX = Math.max(1, this.particleAreaRadiusX);
-    const radiusY = Math.max(1, this.particleAreaRadiusY);
-
+    const safeAlpha = clamp(baseAlpha, 0.22, 0.95);
     return {
-      onEmit: (particle) => {
-        const relativeX = Math.abs(particle.x - centerX) < Math.abs(particle.x)
-          ? particle.x - centerX
-          : particle.x;
-        const relativeY = Math.abs(particle.y - centerY) < Math.abs(particle.y)
-          ? particle.y - centerY
-          : particle.y;
-        const normalizedX = relativeX / radiusX;
-        const normalizedY = relativeY / radiusY;
-        const radialDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
-        const edgeProgress = clamp((radialDistance - PARTICLE_EDGE_FADE_START) / (1 - PARTICLE_EDGE_FADE_START), 0, 1);
-        const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
-        return baseAlpha * clamp(edgeFade, 0.08, 1);
-      },
-      onUpdate: (particle, key, value, t) => value * (1 - t),
+      start: safeAlpha,
+      end: 0,
+      ease: 'Quad.easeOut',
     };
   }
 
@@ -122,18 +106,23 @@ class TunnelOuterRing {
       const side = Math.random() < 0.5 ? -1 : 1;
       const minBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_INNER;
       const maxBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_OUTER;
-      return side * (minBand + Math.random() * (maxBand - minBand));
+      return centerX + side * (minBand + Math.random() * (maxBand - minBand));
     };
+
+    const toWorldYRange = (range) => ({
+      min: centerY + range.min,
+      max: centerY + range.max,
+    });
 
     const createParticlesLayer = (textureKey, alphaConfig, scaleConfig, speedMin, speedMax, maxY, frequency, lifespan, depth, yRange) => (
       this.scene.add.particles(0, 0, textureKey, {
         x: { onEmit: sideSpawnX },
-        y: yRange,
+        y: toWorldYRange(yRange),
         alpha: alphaConfig,
         scale: scaleConfig,
         speedX: {
           onEmit: (particle) => {
-            const direction = particle.x >= 0 ? -1 : 1;
+            const direction = particle.x >= centerX ? -1 : 1;
             return direction * (speedMin + Math.random() * (speedMax - speedMin));
           },
         },
@@ -142,7 +131,7 @@ class TunnelOuterRing {
         quantity: 1,
         lifespan,
         blendMode: 'ADD',
-      }).setDepth(depth).setPosition(centerX, centerY)
+      }).setDepth(depth)
     );
 
     const textureCount = particleTextureKeys.length;
@@ -242,7 +231,7 @@ class TunnelOuterRing {
     if (typeof emitter.setSpeedX === 'function') {
       emitter.setSpeedX({
         onEmit: (particle) => {
-          const direction = particle.x >= 0 ? -1 : 1;
+          const direction = particle.x >= this.particleCenterX ? -1 : 1;
           return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
         },
       });
@@ -255,7 +244,7 @@ class TunnelOuterRing {
 
     if (typeof emitter.speedX === 'object' && emitter.speedX !== null) {
       emitter.speedX.onEmit = (particle) => {
-        const direction = particle.x >= 0 ? -1 : 1;
+        const direction = particle.x >= this.particleCenterX ? -1 : 1;
         return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
       };
     }

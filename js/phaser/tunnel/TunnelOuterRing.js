@@ -98,7 +98,7 @@ class TunnelOuterRing {
         const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
         return baseAlpha * clamp(edgeFade, 0.08, 1);
       },
-      onUpdate: (particle, key, value, t) => value * (1 - t),
+      onUpdate: (particle, key, t, value) => value * (1 - t),
     };
   }
 

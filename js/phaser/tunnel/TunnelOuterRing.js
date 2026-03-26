@@ -19,7 +19,7 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
   particlesBackCount: 40,
   particlesFrontCount: 54,
   particleSpeedMultiplier: 1,
-  glowAlpha: 0.18,
+  glowAlpha: 0.42,
   tieToGameSpeed: true,
   speedMin: 0.01,
   speedMax: 0.25,
@@ -82,27 +82,11 @@ class TunnelOuterRing {
   }
 
   createParticleAlphaConfig(baseAlpha) {
-    const centerX = this.particleCenterX;
-    const centerY = this.particleCenterY;
-    const radiusX = Math.max(1, this.particleAreaRadiusX);
-    const radiusY = Math.max(1, this.particleAreaRadiusY);
-
+    const safeAlpha = clamp(baseAlpha, 0.38, 0.98);
     return {
-      onEmit: (particle) => {
-        const relativeX = Math.abs(particle.x - centerX) < Math.abs(particle.x)
-          ? particle.x - centerX
-          : particle.x;
-        const relativeY = Math.abs(particle.y - centerY) < Math.abs(particle.y)
-          ? particle.y - centerY
-          : particle.y;
-        const normalizedX = relativeX / radiusX;
-        const normalizedY = relativeY / radiusY;
-        const radialDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
-        const edgeProgress = clamp((radialDistance - PARTICLE_EDGE_FADE_START) / (1 - PARTICLE_EDGE_FADE_START), 0, 1);
-        const edgeFade = 1 - Math.pow(edgeProgress, PARTICLE_EDGE_FADE_POWER);
-        return baseAlpha * clamp(edgeFade, 0.08, 1);
-      },
-      onUpdate: (particle, key, value, t) => value * (1 - t),
+      start: safeAlpha,
+      end: 0,
+      ease: 'Quad.easeOut',
     };
   }
 
@@ -122,27 +106,32 @@ class TunnelOuterRing {
       const side = Math.random() < 0.5 ? -1 : 1;
       const minBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_INNER;
       const maxBand = this.particleAreaRadiusX * PARTICLE_WALL_BAND_OUTER;
-      return side * (minBand + Math.random() * (maxBand - minBand));
+      return centerX + side * (minBand + Math.random() * (maxBand - minBand));
     };
+
+    const toWorldYRange = (range) => ({
+      min: centerY + range.min,
+      max: centerY + range.max,
+    });
 
     const createParticlesLayer = (textureKey, alphaConfig, scaleConfig, speedMin, speedMax, maxY, frequency, lifespan, depth, yRange) => (
       this.scene.add.particles(0, 0, textureKey, {
         x: { onEmit: sideSpawnX },
-        y: yRange,
+        y: toWorldYRange(yRange),
         alpha: alphaConfig,
         scale: scaleConfig,
         speedX: {
           onEmit: (particle) => {
-            const direction = particle.x >= 0 ? -1 : 1;
+            const direction = particle.x >= centerX ? -1 : 1;
             return direction * (speedMin + Math.random() * (speedMax - speedMin));
           },
         },
         speedY: { min: -maxY, max: maxY },
         frequency,
-        quantity: 1,
+        quantity: 2,
         lifespan,
         blendMode: 'ADD',
-      }).setDepth(depth).setPosition(centerX, centerY)
+      }).setDepth(depth)
     );
 
     const textureCount = particleTextureKeys.length;
@@ -154,12 +143,12 @@ class TunnelOuterRing {
     this.backParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
       textureKey,
       backAlpha,
-      { start: 0.14, end: 0.035 },
-      18,
-      36,
-      16,
+      { start: 0.24, end: 0.08 },
+      6,
+      14,
+      8,
       perTextureBackFrequency,
-      { min: 780, max: 1280 },
+      { min: 1400, max: 2200 },
       PARTICLE_DEPTH_BACK,
       { min: -this.particleAreaRadiusY * 0.9, max: this.particleAreaRadiusY * 0.9 },
     ));
@@ -167,12 +156,12 @@ class TunnelOuterRing {
     this.frontParticles = particleTextureKeys.map((textureKey) => createParticlesLayer(
       textureKey,
       frontAlpha,
-      { start: 0.22, end: 0.09 },
-      26,
-      52,
+      { start: 0.34, end: 0.12 },
+      10,
       20,
+      10,
       perTextureFrontFrequency,
-      { min: 700, max: 1140 },
+      { min: 1200, max: 1900 },
       PARTICLE_DEPTH_FRONT,
       { min: -this.particleAreaRadiusY * 0.86, max: this.particleAreaRadiusY * 0.86 },
     ));
@@ -222,15 +211,19 @@ class TunnelOuterRing {
     const perEmitterFrontFrequency = 1000 / Math.max(1, safeFrontRate / frontEmitterCount);
 
     this.backEmitters.forEach((emitter) => {
-      emitter.start();
+      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
+        emitter.start();
+      }
       emitter.setFrequency(perEmitterBackFrequency);
-      this.setEmitterVelocity(emitter, 18 * speedMultiplier, 36 * speedMultiplier, 16 * speedMultiplier);
+      this.setEmitterVelocity(emitter, 6 * speedMultiplier, 14 * speedMultiplier, 8 * speedMultiplier);
     });
 
     this.frontEmitters.forEach((emitter) => {
-      emitter.start();
+      if (emitter && emitter.emitting === false && typeof emitter.start === 'function') {
+        emitter.start();
+      }
       emitter.setFrequency(perEmitterFrontFrequency);
-      this.setEmitterVelocity(emitter, 26 * speedMultiplier, 52 * speedMultiplier, 20 * speedMultiplier);
+      this.setEmitterVelocity(emitter, 10 * speedMultiplier, 20 * speedMultiplier, 10 * speedMultiplier);
     });
   }
 
@@ -242,7 +235,7 @@ class TunnelOuterRing {
     if (typeof emitter.setSpeedX === 'function') {
       emitter.setSpeedX({
         onEmit: (particle) => {
-          const direction = particle.x >= 0 ? -1 : 1;
+          const direction = particle.x >= this.particleCenterX ? -1 : 1;
           return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
         },
       });
@@ -255,7 +248,7 @@ class TunnelOuterRing {
 
     if (typeof emitter.speedX === 'object' && emitter.speedX !== null) {
       emitter.speedX.onEmit = (particle) => {
-        const direction = particle.x >= 0 ? -1 : 1;
+        const direction = particle.x >= this.particleCenterX ? -1 : 1;
         return direction * (minXAbs + Math.random() * (maxXAbs - minXAbs));
       };
     }

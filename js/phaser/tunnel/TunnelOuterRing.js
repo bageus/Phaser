@@ -29,6 +29,8 @@ const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
 const DEBUG_SIDE_SPRITES_PER_SIDE = 4;
 const DEBUG_SPRITE_SIZE = 120;
+const DEBUG_BASE_X_OFFSET_FACTOR = 0.86;
+const DEBUG_PULSE_PERIOD_MS = 1200;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -74,6 +76,7 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
 
     this.createParticleLayers(centerX, centerY);
   }
@@ -89,7 +92,7 @@ class TunnelOuterRing {
 
     const textureKey = particleTextureKeys[0];
     const verticalStep = (this.particleAreaRadiusY * 2) / (DEBUG_SIDE_SPRITES_PER_SIDE + 1);
-    const xOffset = this.particleAreaRadiusX * 0.86;
+    const xOffset = this.particleAreaRadiusX * DEBUG_BASE_X_OFFSET_FACTOR;
 
     this.backParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => (
       this.scene.add
@@ -112,6 +115,12 @@ class TunnelOuterRing {
         .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
         .setDepth(PARTICLE_DEPTH_FRONT)
     ));
+
+    this.debugSprites = [...this.backParticles, ...this.frontParticles];
+    this.debugSprites.forEach((sprite, index) => {
+      const textureForSprite = particleTextureKeys[index % particleTextureKeys.length];
+      sprite.setTexture(textureForSprite);
+    });
 
     this.backEmitters = [];
     this.frontEmitters = [];
@@ -139,7 +148,25 @@ class TunnelOuterRing {
   }
 
   updateParticleIntensity() {
-    // Intentionally no-op for debug mode: keep only static side sprites visible.
+    if (!this.debugSprites?.length) {
+      return;
+    }
+
+    const alphaBase = clamp(this.vfxConfig.glowAlpha, 0.2, 0.98);
+    const pulse = 0.5 + 0.5 * Math.sin(this.scene.time.now / DEBUG_PULSE_PERIOD_MS);
+    const speedBoost = this.vfxConfig.tieToGameSpeed ? this.speedRatio : 0;
+    const targetAlpha = clamp(alphaBase * (0.82 + pulse * 0.28), 0.2, 1);
+    const targetScale = 1 + 0.04 * pulse + 0.06 * speedBoost;
+
+    this.debugSprites.forEach((sprite, index) => {
+      const isRight = index >= DEBUG_SIDE_SPRITES_PER_SIDE;
+      const sideSign = isRight ? 1 : -1;
+      const xBase = this.particleCenterX + sideSign * this.particleAreaRadiusX * DEBUG_BASE_X_OFFSET_FACTOR;
+      const sway = (2 + index) * Math.sin((this.scene.time.now / 700) + index);
+      sprite.setAlpha(targetAlpha);
+      sprite.setScale(targetScale);
+      sprite.x = xBase + sway;
+    });
   }
 
   applySnapshot(snapshot) {
@@ -193,6 +220,7 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -211,6 +239,7 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -224,6 +253,7 @@ class TunnelOuterRing {
     this.frontParticles = null;
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
     this.image = null;
   }
 }

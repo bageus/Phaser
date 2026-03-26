@@ -28,11 +28,13 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
 const DEBUG_SIDE_SPRITES_PER_SIDE = 4;
-const DEBUG_SPRITE_SIZE = 152;
-const DEBUG_BASE_X_OFFSET_FACTOR = 0.86;
+const DEBUG_SPRITE_SIZE = 104;
+const DEBUG_BASE_X_OFFSET_FACTOR = 0.93;
 const DEBUG_PULSE_PERIOD_MS = 1200;
 const DEBUG_SWAY_AMPLITUDE_BASE = 10;
 const DEBUG_VERTICAL_DRIFT_BASE = 7;
+const DEBUG_ALPHA_FRONT_MULTIPLIER = 1;
+const DEBUG_ALPHA_BACK_MULTIPLIER = 0.72;
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -103,7 +105,7 @@ class TunnelOuterRing {
         .sprite(centerX - xOffset, y, textureKey)
         .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
         .setDepth(PARTICLE_DEPTH_BACK)
-        .setBlendMode('ADD');
+        .setBlendMode('NORMAL');
     });
 
     this.frontParticles = Array.from({ length: DEBUG_SIDE_SPRITES_PER_SIDE }, (_, index) => {
@@ -112,7 +114,7 @@ class TunnelOuterRing {
         .sprite(centerX + xOffset, y, textureKey)
         .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
         .setDepth(PARTICLE_DEPTH_FRONT)
-        .setBlendMode('ADD');
+        .setBlendMode('NORMAL');
     });
 
     this.debugSprites = [...this.backParticles, ...this.frontParticles];
@@ -156,11 +158,13 @@ class TunnelOuterRing {
       return;
     }
 
-    const alphaBase = clamp(this.vfxConfig.glowAlpha * 1.75, 0.6, 0.98);
+    const alphaBase = clamp(this.vfxConfig.glowAlpha, 0.2, 0.72);
     const pulse = 0.5 + 0.5 * Math.sin(this.scene.time.now / DEBUG_PULSE_PERIOD_MS);
     const speedBoost = this.vfxConfig.tieToGameSpeed ? this.speedRatio : 0;
-    const targetAlpha = clamp(alphaBase * (0.86 + pulse * 0.34), 0.58, 1);
-    const targetScale = 1.06 + 0.08 * pulse + 0.08 * speedBoost;
+    const speedMultiplier = Number.isFinite(this.vfxConfig.particleSpeedMultiplier)
+      ? Math.max(0.4, this.vfxConfig.particleSpeedMultiplier)
+      : 1;
+    const targetScale = 0.9 + 0.05 * pulse + 0.05 * speedBoost;
 
     this.debugSprites.forEach((sprite, index) => {
       const meta = this.debugSpriteMeta[index];
@@ -170,15 +174,18 @@ class TunnelOuterRing {
       const isRight = index >= DEBUG_SIDE_SPRITES_PER_SIDE;
       const sideSign = isRight ? 1 : -1;
       const xBase = this.particleCenterX + sideSign * this.particleAreaRadiusX * DEBUG_BASE_X_OFFSET_FACTOR;
-      const swayAmplitude = DEBUG_SWAY_AMPLITUDE_BASE + index * 1.6 + speedBoost * 12;
-      const driftAmplitude = DEBUG_VERTICAL_DRIFT_BASE + (index % DEBUG_SIDE_SPRITES_PER_SIDE) * 1.4 + speedBoost * 8;
-      const sway = swayAmplitude * Math.sin((this.scene.time.now / 580) + meta.phase);
-      const yDrift = driftAmplitude * Math.cos((this.scene.time.now / 760) + meta.phase * 1.2);
-      sprite.setAlpha(targetAlpha);
+      const swayAmplitude = (DEBUG_SWAY_AMPLITUDE_BASE + index * 1.1 + speedBoost * 5) * speedMultiplier;
+      const driftAmplitude = (DEBUG_VERTICAL_DRIFT_BASE + (index % DEBUG_SIDE_SPRITES_PER_SIDE) * 1) * speedMultiplier;
+      const sway = swayAmplitude * Math.sin((this.scene.time.now / (640 / speedMultiplier)) + meta.phase);
+      const yDrift = driftAmplitude * Math.cos((this.scene.time.now / (880 / speedMultiplier)) + meta.phase * 1.2);
+      const layerAlpha = alphaBase
+        * (isRight ? DEBUG_ALPHA_FRONT_MULTIPLIER : DEBUG_ALPHA_BACK_MULTIPLIER)
+        * (0.8 + pulse * 0.2);
+      sprite.setAlpha(clamp(layerAlpha, 0.18, 0.62));
       sprite.setScale(targetScale);
       sprite.x = xBase + sway;
       sprite.y = meta.baseY + yDrift;
-      sprite.rotation = (0.08 + speedBoost * 0.2) * Math.sin((this.scene.time.now / 900) + meta.phase);
+      sprite.rotation = (0.025 + speedBoost * 0.08) * Math.sin((this.scene.time.now / (980 / speedMultiplier)) + meta.phase);
     });
   }
 

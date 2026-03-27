@@ -42,6 +42,10 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function randomRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
 class TunnelOuterRing {
   static preload(scene) {
     if (!scene.textures.exists(TUNNEL_OUTER_RING_TEXTURE_KEY)) {
@@ -77,6 +81,9 @@ class TunnelOuterRing {
     this.frontParticles = [];
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
+    this.activeParticleTextureKeys = [];
 
     this.createParticleLayers(centerX, centerY);
   }
@@ -98,6 +105,21 @@ class TunnelOuterRing {
     if (!this.vfxConfig.particlesEnabled || particleTextureKeys.length === 0) {
       return;
     }
+    this.activeParticleTextureKeys = [...particleTextureKeys];
+
+    const backCount = clamp(Math.round(this.vfxConfig.particlesBackCount * 0.08), 2, 8);
+    const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.08), 3, 10);
+    const totalCount = backCount + frontCount;
+    const seedTexture = particleTextureKeys[0];
+    const backIntensity = clamp(this.vfxConfig.particlesBackCount / 40, 0.55, 1.5);
+    const frontIntensity = clamp(this.vfxConfig.particlesFrontCount / 54, 0.55, 1.5);
+
+    this.debugSprites = Array.from({ length: totalCount }, () => (
+      this.scene.add
+        .sprite(centerX, centerY, seedTexture)
+        .setDisplaySize(DEBUG_SPRITE_SIZE, DEBUG_SPRITE_SIZE)
+        .setBlendMode('NORMAL')
+    ));
 
     const backAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.52);
     const frontAlpha = this.createParticleAlphaConfig(this.vfxConfig.glowAlpha * 0.78);
@@ -168,8 +190,8 @@ class TunnelOuterRing {
       0.76,
     ));
 
-    this.backEmitters = [...this.backParticles];
-    this.frontEmitters = [...this.frontParticles];
+    this.backEmitters = [];
+    this.frontEmitters = [];
     this.ensureParticlesOnTop();
   }
 
@@ -285,6 +307,9 @@ class TunnelOuterRing {
     this.frontParticles = [];
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
+    this.activeParticleTextureKeys = [];
     this.createParticleLayers(this.particleCenterX, this.particleCenterY);
 
     return this;
@@ -303,6 +328,9 @@ class TunnelOuterRing {
     this.frontParticles = [];
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
+    this.activeParticleTextureKeys = [];
     this.createParticleLayers(centerX, centerY);
 
     return this;
@@ -316,6 +344,9 @@ class TunnelOuterRing {
     this.frontParticles = [];
     this.backEmitters = [];
     this.frontEmitters = [];
+    this.debugSprites = [];
+    this.debugSpriteMeta = [];
+    this.activeParticleTextureKeys = [];
     this.image = null;
   }
 }

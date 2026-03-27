@@ -25,13 +25,10 @@ const DEFAULT_SETTINGS = Object.freeze({
   driftMin: 0.04,
   driftMax: 0.13,
   tintLeft: 0xb9d9ff,
-  tintRight: 0xd4eeff,
   depth: 11,
 });
 
 const SIDE_LEFT = 'left';
-const SIDE_RIGHT = 'right';
-const SIDE_SEQUENCE = Object.freeze([SIDE_LEFT, SIDE_RIGHT]);
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -62,7 +59,7 @@ function sideBaseAngle(side) {
   if (side === SIDE_LEFT) {
     return Math.PI; // 180°
   }
-  return 0; // 0°
+  return Math.PI;
 }
 
 function pickRange(scene, min, max) {
@@ -102,7 +99,6 @@ class WarpTunnelVFX {
     this.streaks = [];
     this.snapshot = null;
     this.timeSinceSpawn = 0;
-    this.sideIndex = 0;
   }
 
   create() {
@@ -113,7 +109,7 @@ class WarpTunnelVFX {
     const count = Math.max(0, Math.floor(this.settings.activeStreaks));
     for (let index = 0; index < count; index += 1) {
       const sprite = this.scene.add.image(0, 0, chooseTextureKey(this.scene))
-        .setOrigin(0.5, 0.5)
+        .setOrigin(0, 0.5)
         .setDepth(this.settings.depth)
         .setBlendMode('ADD')
         .setVisible(false);
@@ -172,6 +168,9 @@ class WarpTunnelVFX {
       const radius = CONFIG.TUBE_RADIUS * perspective;
       const posX = centerX + Math.sin(animatedAngle) * radius + (tube.centerOffsetX || 0) * bendInfluence;
       const posY = centerY + Math.cos(animatedAngle) * radius * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bendInfluence;
+      const centerVectorX = centerX - posX;
+      const centerVectorY = centerY - posY;
+      const centerAngle = Math.atan2(centerVectorY, centerVectorX);
 
       const alongWallStretch = lerp(entry.baseScaleY * 0.8, entry.baseScaleY * 1.22, easedT);
       const acrossWallScale = lerp(entry.baseScaleX, entry.baseScaleX * 0.64, easedT);
@@ -180,7 +179,7 @@ class WarpTunnelVFX {
       entry.sprite
         .setVisible(true)
         .setPosition(posX, posY)
-        .setRotation(animatedAngle + Math.PI * 0.5)
+        .setRotation(centerAngle)
         .setScale(acrossWallScale * (0.65 + perspective), alongWallStretch * (0.7 + perspective * 1.3))
         .setAlpha(alpha);
     });
@@ -197,8 +196,7 @@ class WarpTunnelVFX {
     }
 
     this.timeSinceSpawn = 0;
-    const side = SIDE_SEQUENCE[this.sideIndex % SIDE_SEQUENCE.length];
-    this.sideIndex += 1;
+    const side = SIDE_LEFT;
 
     const baseAngle = sideBaseAngle(side);
     deadEntry.side = side;
@@ -212,13 +210,13 @@ class WarpTunnelVFX {
     deadEntry.baseScaleX = pickRange(this.scene, this.settings.widthMin, this.settings.widthMax);
     deadEntry.baseScaleY = pickRange(this.scene, this.settings.heightMin, this.settings.heightMax);
 
-    const tintBase = side === SIDE_LEFT ? this.settings.tintLeft : this.settings.tintRight;
+    const tintBase = this.settings.tintLeft;
     const tintNoise = pickRange(this.scene, -this.settings.hueVariance, this.settings.hueVariance);
     const tintColor = tintShift(tintBase, tintNoise);
 
     deadEntry.sprite
       .setTexture(chooseTextureKey(this.scene))
-      .setFlipY(side === SIDE_RIGHT)
+      .setFlipY(false)
       .setTint(tintColor)
       .setVisible(true)
       .setAlpha(0);

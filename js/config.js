@@ -69,6 +69,26 @@ const CONFIG = {
     tieToGameSpeed: true,
     speedMin: 0.01,
     speedMax: 0.25,
+  },
+
+  WARP_TUNNEL_STREAK_VFX: {
+    enabled: true,
+    activeStreaks: 1,
+    respawnDelayMs: 70,
+    lifeMinMs: 520,
+    lifeMaxMs: 780,
+    alphaMin: 0.08,
+    alphaMax: 0.32,
+    startDepth: 0.15,
+    endDepth: 1.06,
+    widthMin: 0.16,
+    widthMax: 0.3,
+    heightMin: 0.9,
+    heightMax: 1.45,
+    angleJitter: 0.7853981633974483,
+    driftMin: 0.04,
+    driftMax: 0.12,
+    depth: 11,
   }
 };
 

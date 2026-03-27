@@ -1,6 +1,7 @@
 import { EntityRenderer } from '../entities/EntityRenderer.js';
 import { TunnelRenderer } from '../tunnel/TunnelRenderer.js';
 import { TunnelOuterRing } from '../tunnel/TunnelOuterRing.js';
+import { WarpTunnelVFX } from '../tunnel/WarpTunnelVFX.js';
 import { CONFIG } from '../../config.js';
 
 const MAIN_SCENE_KEY = 'MainScene';
@@ -14,6 +15,7 @@ class MainSceneController {
     this.tunnelRenderer = null;
     this.entityRenderer = null;
     this.tunnelOuterRing = null;
+    this.warpTunnelVfx = null;
     this.handleResize = this.handleResize.bind(this);
     this.handleUpdate = this.handleUpdate.bind(this);
   }
@@ -25,6 +27,7 @@ class MainSceneController {
   preload() {
     EntityRenderer.preload(this.scene);
     TunnelOuterRing.preload(this.scene);
+    WarpTunnelVFX.preload(this.scene);
   }
 
   create() {
@@ -35,11 +38,14 @@ class MainSceneController {
     this.tunnelRenderer.create();
     this.tunnelOuterRing = new TunnelOuterRing(this.scene, CONFIG.ENERGY_TUBE_VFX)
       .fitToTube(CONFIG.TUBE_RADIUS, CONFIG.PLAYER_OFFSET);
+    this.warpTunnelVfx = new WarpTunnelVFX(this.scene, CONFIG.WARP_TUNNEL_STREAK_VFX);
+    this.warpTunnelVfx.create();
     this.entityRenderer = new EntityRenderer(this.scene);
     this.entityRenderer.create();
     this.tunnelRenderer.applySnapshot(this.snapshot);
     this.entityRenderer.applySnapshot(this.snapshot);
     this.tunnelOuterRing?.applySnapshot(this.snapshot);
+    this.warpTunnelVfx?.applySnapshot(this.snapshot);
     this.scene.scale.on('resize', this.handleResize);
     this.scene.events.on('update', this.handleUpdate);
   }
@@ -48,10 +54,12 @@ class MainSceneController {
     this.background?.setSize(gameSize.width, gameSize.height);
     this.tunnelOuterRing?.resize(gameSize.width, gameSize.height);
     this.tunnelRenderer?.resize();
+    this.warpTunnelVfx?.resize(gameSize.width, gameSize.height);
   }
 
   handleUpdate(time, delta) {
     this.tunnelOuterRing?.update(time, delta);
+    this.warpTunnelVfx?.update(time, delta);
   }
 
   applySnapshot(snapshot) {
@@ -59,17 +67,20 @@ class MainSceneController {
     this.tunnelRenderer?.applySnapshot(this.snapshot);
     this.entityRenderer?.applySnapshot(this.snapshot);
     this.tunnelOuterRing?.applySnapshot(this.snapshot);
+    this.warpTunnelVfx?.applySnapshot(this.snapshot);
   }
 
   destroy() {
     this.scene.scale.off('resize', this.handleResize);
     this.scene.events.off('update', this.handleUpdate);
     this.tunnelOuterRing?.destroy();
+    this.warpTunnelVfx?.destroy();
     this.tunnelRenderer?.destroy();
     this.entityRenderer?.destroy();
     this.tunnelOuterRing = null;
     this.tunnelRenderer = null;
     this.entityRenderer = null;
+    this.warpTunnelVfx = null;
   }
 }
 

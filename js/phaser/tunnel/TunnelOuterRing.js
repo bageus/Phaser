@@ -27,7 +27,7 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
-const DEBUG_SPRITE_SIZE = 1;
+const DEBUG_SPRITE_SIZE = 2;
 const DEBUG_PULSE_PERIOD_MS = 1200;
 const DEBUG_ALPHA_FRONT_MULTIPLIER = 1.08;
 const DEBUG_ALPHA_BACK_MULTIPLIER = 0.82;
@@ -104,6 +104,8 @@ class TunnelOuterRing {
     const frontCount = clamp(Math.round(this.vfxConfig.particlesFrontCount * 0.08), 3, 10);
     const totalCount = backCount + frontCount;
     const seedTexture = particleTextureKeys[0];
+    const backIntensity = clamp(this.vfxConfig.particlesBackCount / 40, 0.55, 1.5);
+    const frontIntensity = clamp(this.vfxConfig.particlesFrontCount / 54, 0.55, 1.5);
 
     this.debugSprites = Array.from({ length: totalCount }, () => (
       this.scene.add
@@ -125,15 +127,17 @@ class TunnelOuterRing {
       const spawn = randomPointInTube();
       const angle = randomRange(0, Math.PI * 2);
       const textureKey = particleTextureKeys[Math.floor(Math.random() * particleTextureKeys.length)];
+      const intensity = isFront ? frontIntensity : backIntensity;
       return {
         isFront,
+        intensity,
         textureKey,
         phase: randomRange(0, Math.PI * 2),
         ageMs: randomRange(0, DEBUG_MAX_LIFESPAN_MS),
         lifeMs: randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS),
-        baseScale: randomRange(0.66, 1),
-        velocityX: Math.cos(angle) * randomRange(8, 26),
-        velocityY: Math.sin(angle) * randomRange(8, 24),
+        baseScale: randomRange(0.6, 0.92) * intensity,
+        velocityX: Math.cos(angle) * randomRange(7, 16) * intensity,
+        velocityY: Math.sin(angle) * randomRange(7, 14) * intensity,
         x: spawn.x,
         y: spawn.y,
       };
@@ -189,7 +193,7 @@ class TunnelOuterRing {
     const speedMultiplier = Number.isFinite(this.vfxConfig.particleSpeedMultiplier)
       ? Math.max(0.4, this.vfxConfig.particleSpeedMultiplier)
       : 1;
-    const targetScale = 0.9 + 0.08 * pulse + 0.08 * speedBoost;
+    const targetScale = 0.78 + 0.06 * pulse + 0.06 * speedBoost;
     const densityFactor = clamp(
       (this.vfxConfig.particlesBackCount + this.vfxConfig.particlesFrontCount) / (40 + 54),
       0.6,
@@ -209,15 +213,15 @@ class TunnelOuterRing {
         const angle = randomRange(0, Math.PI * 2);
         meta.ageMs = 0;
         meta.lifeMs = randomRange(DEBUG_MIN_LIFESPAN_MS, DEBUG_MAX_LIFESPAN_MS);
-        meta.baseScale = randomRange(0.66, 1);
+        meta.baseScale = randomRange(0.6, 0.92) * meta.intensity;
         meta.phase = randomRange(0, Math.PI * 2);
         meta.textureKey = this.activeParticleTextureKeys[
           Math.floor(Math.random() * this.activeParticleTextureKeys.length)
         ] || meta.textureKey;
         meta.x = this.particleCenterX + Math.cos(angle) * this.particleAreaRadiusX * randomRange(0.12, 0.58);
         meta.y = this.particleCenterY + Math.sin(angle) * this.particleAreaRadiusY * randomRange(0.12, 0.56);
-        meta.velocityX = Math.cos(angle) * randomRange(8, 26);
-        meta.velocityY = Math.sin(angle) * randomRange(8, 24);
+        meta.velocityX = Math.cos(angle) * randomRange(7, 16) * meta.intensity;
+        meta.velocityY = Math.sin(angle) * randomRange(7, 14) * meta.intensity;
         sprite.setTexture(meta.textureKey);
       }
 
@@ -235,6 +239,7 @@ class TunnelOuterRing {
       const layerAlpha = alphaBase
         * (meta.isFront ? DEBUG_ALPHA_FRONT_MULTIPLIER : DEBUG_ALPHA_BACK_MULTIPLIER)
         * (0.84 + pulse * 0.24)
+        * (0.85 + 0.25 * meta.intensity)
         * (0.55 + lifeRatio * 0.55);
       sprite.setAlpha(clamp(layerAlpha, 0.2, 0.74));
       sprite.setScale(targetScale * meta.baseScale);

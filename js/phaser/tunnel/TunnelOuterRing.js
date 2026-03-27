@@ -27,13 +27,13 @@ const DEFAULT_VFX_CONFIG = Object.freeze({
 
 const PARTICLE_DEPTH_BACK = 30;
 const PARTICLE_DEPTH_FRONT = 31;
-const DEBUG_SPRITE_SIZE = 2;
+const DEBUG_SPRITE_SIZE = 1;
 const DEBUG_PULSE_PERIOD_MS = 1200;
 const DEBUG_ALPHA_FRONT_MULTIPLIER = 1.08;
 const DEBUG_ALPHA_BACK_MULTIPLIER = 0.82;
 const DEBUG_MIN_LIFESPAN_MS = 900;
 const DEBUG_MAX_LIFESPAN_MS = 1800;
-const LEFT_ONLY_TEXTURE_KEY = 'energy_effect.webp';
+const EXCLUDED_TEXTURE_KEYS = new Set(['energy_effect.webp']);
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -93,7 +93,8 @@ class TunnelOuterRing {
   createParticleLayers(centerX, centerY) {
     const particleTextureKeys = ENERGY_PARTICLE_TEXTURES
       .map((texture) => texture.key)
-      .filter((textureKey) => this.scene.textures.exists(textureKey));
+      .filter((textureKey) => this.scene.textures.exists(textureKey))
+      .filter((textureKey) => !EXCLUDED_TEXTURE_KEYS.has(textureKey));
 
     if (!this.vfxConfig.particlesEnabled || particleTextureKeys.length === 0) {
       return;
@@ -150,7 +151,6 @@ class TunnelOuterRing {
         .setTexture(meta.textureKey)
         .setDepth(isFront ? PARTICLE_DEPTH_FRONT : PARTICLE_DEPTH_BACK)
         .setPosition(meta.x, meta.y);
-      this.applyTextureOrientation(sprite, meta);
       return meta;
     });
 
@@ -246,18 +246,7 @@ class TunnelOuterRing {
       sprite.x = meta.x;
       sprite.y = meta.y;
       sprite.rotation = (0.03 + speedBoost * 0.08) * Math.sin((now / (960 / speedMultiplier)) + meta.phase);
-      this.applyTextureOrientation(sprite, meta);
     });
-  }
-
-  applyTextureOrientation(sprite, meta) {
-    if (!sprite || !meta) {
-      return;
-    }
-
-    const isRightSide = meta.x >= this.particleCenterX;
-    const shouldMirrorOnRight = meta.textureKey === LEFT_ONLY_TEXTURE_KEY && isRightSide;
-    sprite.setFlipX(Boolean(shouldMirrorOnRight));
   }
 
   applySnapshot(snapshot) {

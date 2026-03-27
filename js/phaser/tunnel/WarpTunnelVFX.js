@@ -14,6 +14,11 @@ const DEFAULT_SETTINGS = Object.freeze({
   lifeMaxMs: 780,
   alphaMin: 0.1,
   alphaMax: 0.38,
+  glowAlphaFactor: 0.58,
+  glowScaleX: 1.95,
+  glowScaleY: 1.18,
+  plasmaPulseHz: 5.6,
+  plasmaPulseAmount: 0.28,
   startDepth: 0.12,
   endDepth: 1.05,
   widthMin: 0.16,
@@ -21,17 +26,15 @@ const DEFAULT_SETTINGS = Object.freeze({
   heightMin: 0.78,
   heightMax: 1.45,
   hueVariance: 0.14,
-  angleJitter: 0.18,
-  driftMin: 0.04,
-  driftMax: 0.13,
+  leftWallAngle: Math.PI,
+  angleJitter: 0,
+  driftMin: 0,
+  driftMax: 0,
   tintLeft: 0xb9d9ff,
-  tintRight: 0xd4eeff,
   depth: 11,
 });
 
 const SIDE_LEFT = 'left';
-const SIDE_RIGHT = 'right';
-const SIDE_SEQUENCE = Object.freeze([SIDE_LEFT, SIDE_RIGHT]);
 
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
@@ -58,11 +61,8 @@ function alphaEnvelope(t) {
   return Math.sin(Math.PI * clamped) * 0.6 + fadeIn * fadeOut * 0.4;
 }
 
-function sideBaseAngle(side) {
-  if (side === SIDE_LEFT) {
-    return Math.PI; // 180°
-  }
-  return 0; // 0°
+function sideBaseAngle(settings) {
+  return Number.isFinite(settings?.leftWallAngle) ? settings.leftWallAngle : Math.PI;
 }
 
 function pickRange(scene, min, max) {
@@ -102,7 +102,6 @@ class WarpTunnelVFX {
     this.streaks = [];
     this.snapshot = null;
     this.timeSinceSpawn = 0;
-    this.sideIndex = 0;
   }
 
   create() {
@@ -117,7 +116,23 @@ class WarpTunnelVFX {
         .setDepth(this.settings.depth)
         .setBlendMode('ADD')
         .setVisible(false);
-      this.streaks.push({ sprite, alive: false, lifeMs: 0, ageMs: 0, side: SIDE_LEFT, drift: 0, angle: 0, startDepth: 0, endDepth: 0 });
+      const glowSprite = this.scene.add.image(0, 0, chooseTextureKey(this.scene))
+        .setOrigin(0.5, 0.5)
+        .setDepth(this.settings.depth - 0.1)
+        .setBlendMode('ADD')
+        .setVisible(false);
+      this.streaks.push({
+        sprite,
+        glowSprite,
+        alive: false,
+        lifeMs: 0,
+        ageMs: 0,
+        side: SIDE_LEFT,
+        drift: 0,
+        angle: 0,
+        startDepth: 0,
+        endDepth: 0,
+      });
     }
   }
 
@@ -138,7 +153,10 @@ class WarpTunnelVFX {
     const viewport = snapshot?.viewport;
     const tube = snapshot?.tube;
     if (!viewport || !tube) {
-      this.streaks.forEach((entry) => entry.sprite?.setVisible(false));
+      this.streaks.forEach((entry) => {
+        entry.sprite?.setVisible(false);
+        entry.glowSprite?.setVisible(false);
+      });
       return;
     }
 
@@ -152,6 +170,7 @@ class WarpTunnelVFX {
     this.streaks.forEach((entry) => {
       if (!entry.alive) {
         entry.sprite.setVisible(false);
+        entry.glowSprite.setVisible(false);
         return;
       }
 
@@ -160,6 +179,7 @@ class WarpTunnelVFX {
       if (lifeT >= 1) {
         entry.alive = false;
         entry.sprite.setVisible(false);
+        entry.glowSprite.setVisible(false);
         return;
       }
 
@@ -168,20 +188,31 @@ class WarpTunnelVFX {
       const perspective = Math.max(0.05, 1 - depth);
       const bendInfluence = 1 - perspective;
 
-      const animatedAngle = entry.angle + Math.sin((entry.ageMs / 1000) * 4.2) * entry.drift;
+      const wallAngle = entry.angle;
       const radius = CONFIG.TUBE_RADIUS * perspective;
-      const posX = centerX + Math.sin(animatedAngle) * radius + (tube.centerOffsetX || 0) * bendInfluence;
-      const posY = centerY + Math.cos(animatedAngle) * radius * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bendInfluence;
+      const posX = centerX + Math.sin(wallAngle) * radius + (tube.centerOffsetX || 0) * bendInfluence;
+      const posY = centerY + Math.cos(wallAngle) * radius * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bendInfluence;
       const alongWallStretch = lerp(entry.baseScaleY * 0.8, entry.baseScaleY * 1.22, easedT);
       const acrossWallScale = lerp(entry.baseScaleX, entry.baseScaleX * 0.64, easedT);
       const alpha = clamp(lerp(this.settings.alphaMin, this.settings.alphaMax, 1 - lifeT) * alphaEnvelope(lifeT), 0, 1);
+      const plasmaPulse = 1 + Math.sin((entry.ageMs / 1000) * Math.PI * 2 * this.settings.plasmaPulseHz) * this.settings.plasmaPulseAmount;
+      const glowAlpha = clamp(alpha * this.settings.glowAlphaFactor * (0.88 + (plasmaPulse - 1) * 0.5), 0, 1);
+      const glowScaleX = acrossWallScale * this.settings.glowScaleX * (0.72 + perspective);
+      const glowScaleY = alongWallStretch * this.settings.glowScaleY * (0.78 + perspective * 1.12);
 
       entry.sprite
         .setVisible(true)
         .setPosition(posX, posY)
-        .setRotation(animatedAngle + Math.PI * 0.5)
+        .setRotation(0)
         .setScale(acrossWallScale * (0.65 + perspective), alongWallStretch * (0.7 + perspective * 1.3))
         .setAlpha(alpha);
+
+      entry.glowSprite
+        .setVisible(true)
+        .setPosition(posX, posY)
+        .setRotation(0)
+        .setScale(glowScaleX, glowScaleY)
+        .setAlpha(glowAlpha);
     });
   }
 
@@ -196,10 +227,9 @@ class WarpTunnelVFX {
     }
 
     this.timeSinceSpawn = 0;
-    const side = SIDE_SEQUENCE[this.sideIndex % SIDE_SEQUENCE.length];
-    this.sideIndex += 1;
+    const side = SIDE_LEFT;
 
-    const baseAngle = sideBaseAngle(side);
+    const baseAngle = sideBaseAngle(this.settings);
     deadEntry.side = side;
     deadEntry.alive = true;
     deadEntry.ageMs = 0;
@@ -211,20 +241,31 @@ class WarpTunnelVFX {
     deadEntry.baseScaleX = pickRange(this.scene, this.settings.widthMin, this.settings.widthMax);
     deadEntry.baseScaleY = pickRange(this.scene, this.settings.heightMin, this.settings.heightMax);
 
-    const tintBase = side === SIDE_LEFT ? this.settings.tintLeft : this.settings.tintRight;
+    const tintBase = this.settings.tintLeft;
     const tintNoise = pickRange(this.scene, -this.settings.hueVariance, this.settings.hueVariance);
     const tintColor = tintShift(tintBase, tintNoise);
+    const glowTint = tintShift(tintColor, 0.14 + pickRange(this.scene, 0, this.settings.hueVariance * 0.45));
+    const textureKey = chooseTextureKey(this.scene);
 
     deadEntry.sprite
-      .setTexture(chooseTextureKey(this.scene))
-      .setFlipY(side === SIDE_RIGHT)
+      .setTexture(textureKey)
+      .setFlipY(false)
       .setTint(tintColor)
+      .setVisible(true)
+      .setAlpha(0);
+    deadEntry.glowSprite
+      .setTexture(textureKey)
+      .setFlipY(false)
+      .setTint(glowTint)
       .setVisible(true)
       .setAlpha(0);
   }
 
   destroy() {
-    this.streaks.forEach((entry) => entry.sprite?.destroy());
+    this.streaks.forEach((entry) => {
+      entry.sprite?.destroy();
+      entry.glowSprite?.destroy();
+    });
     this.streaks.length = 0;
     this.snapshot = null;
   }

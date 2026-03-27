@@ -69,13 +69,6 @@ const CONFIG = {
     tieToGameSpeed: true,
     speedMin: 0.01,
     speedMax: 0.25,
-  },
-
-  WARP_TUNNEL_VFX: {
-    enabled: true,
-    tieToGameSpeed: true,
-    speedMin: 0.01,
-    speedMax: 0.25,
   }
 };
 

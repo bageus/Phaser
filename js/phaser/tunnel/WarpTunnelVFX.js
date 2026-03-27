@@ -27,9 +27,15 @@ const DEFAULT_SETTINGS = Object.freeze({
   heightMax: 1.45,
   hueVariance: 0.14,
   leftWallAngle: Math.PI,
+<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
   angleJitter: 0,
   driftMin: 0,
   driftMax: 0,
+=======
+  angleJitter: 0.06,
+  driftMin: 0.04,
+  driftMax: 0.13,
+>>>>>>> main
   tintLeft: 0xb9d9ff,
   depth: 11,
 });
@@ -210,7 +216,11 @@ class WarpTunnelVFX {
       entry.glowSprite
         .setVisible(true)
         .setPosition(posX, posY)
+<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
         .setRotation(0)
+=======
+        .setRotation(animatedAngle + Math.PI * 0.5)
+>>>>>>> main
         .setScale(glowScaleX, glowScaleY)
         .setAlpha(glowAlpha);
     });

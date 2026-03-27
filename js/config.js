@@ -91,9 +91,15 @@ const CONFIG = {
     heightMin: 0.9,
     heightMax: 1.45,
     leftWallAngle: Math.PI,
+<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
+    angleJitter: 0,
+    driftMin: 0,
+    driftMax: 0,
+=======
     angleJitter: 0.06,
     driftMin: 0.04,
     driftMax: 0.12,
+>>>>>>> main
     depth: 11,
   }
 };

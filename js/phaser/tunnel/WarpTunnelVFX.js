@@ -27,9 +27,15 @@ const DEFAULT_SETTINGS = Object.freeze({
   heightMax: 1.45,
   hueVariance: 0.14,
   leftWallAngle: Math.PI,
+<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
+  angleJitter: 0,
+  driftMin: 0,
+  driftMax: 0,
+=======
   angleJitter: 0.06,
   driftMin: 0.04,
   driftMax: 0.13,
+>>>>>>> main
   tintLeft: 0xb9d9ff,
   depth: 11,
 });
@@ -188,10 +194,10 @@ class WarpTunnelVFX {
       const perspective = Math.max(0.05, 1 - depth);
       const bendInfluence = 1 - perspective;
 
-      const animatedAngle = entry.angle + Math.sin((entry.ageMs / 1000) * 4.2) * entry.drift;
+      const wallAngle = entry.angle;
       const radius = CONFIG.TUBE_RADIUS * perspective;
-      const posX = centerX + Math.sin(animatedAngle) * radius + (tube.centerOffsetX || 0) * bendInfluence;
-      const posY = centerY + Math.cos(animatedAngle) * radius * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bendInfluence;
+      const posX = centerX + Math.sin(wallAngle) * radius + (tube.centerOffsetX || 0) * bendInfluence;
+      const posY = centerY + Math.cos(wallAngle) * radius * CONFIG.PLAYER_OFFSET + (tube.centerOffsetY || 0) * bendInfluence;
       const alongWallStretch = lerp(entry.baseScaleY * 0.8, entry.baseScaleY * 1.22, easedT);
       const acrossWallScale = lerp(entry.baseScaleX, entry.baseScaleX * 0.64, easedT);
       const alpha = clamp(lerp(this.settings.alphaMin, this.settings.alphaMax, 1 - lifeT) * alphaEnvelope(lifeT), 0, 1);
@@ -203,14 +209,18 @@ class WarpTunnelVFX {
       entry.sprite
         .setVisible(true)
         .setPosition(posX, posY)
-        .setRotation(animatedAngle + Math.PI * 0.5)
+        .setRotation(0)
         .setScale(acrossWallScale * (0.65 + perspective), alongWallStretch * (0.7 + perspective * 1.3))
         .setAlpha(alpha);
 
       entry.glowSprite
         .setVisible(true)
         .setPosition(posX, posY)
+<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
+        .setRotation(0)
+=======
         .setRotation(animatedAngle + Math.PI * 0.5)
+>>>>>>> main
         .setScale(glowScaleX, glowScaleY)
         .setAlpha(glowAlpha);
     });

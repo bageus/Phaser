@@ -308,8 +308,9 @@ class TunnelRenderer {
     }
 
     const smoothing = 0.24;
+    const scrollSmoothing = 0.16;
     this.smoothedTube.rotation = lerpAngle(this.smoothedTube.rotation || 0, tube.rotation || 0, smoothing);
-    this.smoothedTube.scroll = lerp(this.smoothedTube.scroll || 0, tube.scroll || 0, smoothing);
+    this.smoothedTube.scroll = lerp(this.smoothedTube.scroll || 0, tube.scroll || 0, scrollSmoothing);
     this.smoothedTube.waveMod = lerp(this.smoothedTube.waveMod || 0, tube.waveMod || 0, smoothing);
     this.smoothedTube.curveAngle = lerpAngle(this.smoothedTube.curveAngle || 0, tube.curveAngle || 0, smoothing);
     this.smoothedTube.curveStrength = lerp(this.smoothedTube.curveStrength || 0, tube.curveStrength || 0, smoothing);
@@ -516,8 +517,12 @@ class TunnelRenderer {
 
         if (trackCoverage > 0) {
           const treadPhase = ((animatedDepth + scrollOffset * 0.7) % TRACK_SLAT_PERIOD + TRACK_SLAT_PERIOD) % TRACK_SLAT_PERIOD;
-          const slatVisibility = 1 - clamp((treadPhase - TRACK_SLAT_LENGTH) / TRACK_SLAT_SOFTNESS, 0, 1);
-          if (slatVisibility > 0) {
+          const riseProgress = clamp(treadPhase / Math.max(TRACK_SLAT_SOFTNESS, 0.0001), 0, 1);
+          const fallProgress = clamp((treadPhase - TRACK_SLAT_LENGTH) / Math.max(TRACK_SLAT_SOFTNESS, 0.0001), 0, 1);
+          const riseEase = riseProgress * riseProgress * (3 - 2 * riseProgress);
+          const fallEase = fallProgress * fallProgress * (3 - 2 * fallProgress);
+          const slatVisibility = riseEase * (1 - fallEase);
+          if (slatVisibility > 0.001) {
             trackSlatOverlays.push({
               x1,
               y1,

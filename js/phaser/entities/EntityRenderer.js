@@ -207,6 +207,10 @@ class EntityRenderer {
     this.bonusSprites = [];
     this.obstacleSprites = [];
     this.spinTargetGraphics = [];
+    this.radarLineGraphics = null;
+    this.radarHintTexts = [];
+    this.spinAlertBackdrop = null;
+    this.spinAlertText = null;
     this.playerSprite = null;
     this.playerShadow = null;
   }
@@ -222,6 +226,21 @@ class EntityRenderer {
     this.playerShadow = this.scene.add.ellipse(0, 0, 82, 28, 0x000000, 0.26);
     this.playerSprite = this.scene.add.sprite(0, 0, PLAYER_TEXTURES.idle_back, 0);
     this.playerLayer.add([this.playerShadow, this.playerSprite]);
+
+    this.radarLineGraphics = this.scene.add.graphics().setDepth(18);
+    this.spinAlertBackdrop = this.scene.add.rectangle(0, 0, 0, 0, 0x000000, 0.74)
+      .setDepth(19)
+      .setVisible(false);
+    this.spinAlertText = this.scene.add.text(0, 0, '', {
+      fontFamily: 'Orbitron, Arial, sans-serif',
+      fontSize: '32px',
+      fontStyle: '700',
+      color: '#ffcc00',
+      align: 'center'
+    })
+      .setOrigin(0.5, 0.5)
+      .setDepth(20)
+      .setVisible(false);
   }
 
   destroyPool(pool) {
@@ -234,6 +253,10 @@ class EntityRenderer {
     this.destroyPool(this.bonusSprites);
     this.destroyPool(this.obstacleSprites);
     this.destroyPool(this.spinTargetGraphics);
+    this.destroyPool(this.radarHintTexts);
+    this.radarLineGraphics?.destroy();
+    this.spinAlertBackdrop?.destroy();
+    this.spinAlertText?.destroy();
     this.playerSprite?.destroy();
     this.playerShadow?.destroy();
     this.root?.destroy();
@@ -255,6 +278,8 @@ class EntityRenderer {
     this.renderObjects();
     this.renderPlayer();
     this.renderSpinTargets();
+    this.renderRadarHints();
+    this.renderSpinAlert();
   }
 
   renderPlayer() {
@@ -407,6 +432,141 @@ class EntityRenderer {
       this.spinTargetGraphics[index].clear();
       this.spinTargetGraphics[index].setVisible(false);
     }
+  }
+
+  renderRadarHints() {
+    const viewport = this.snapshot?.viewport;
+    const fx = this.snapshot?.fx;
+    if (!viewport || !fx) return;
+
+    const hints = fx.radarActive && Array.isArray(fx.radarHints)
+      ? fx.radarHints.filter((hint) => Number.isFinite(hint?.lane))
+      : [];
+
+    if (this.radarLineGraphics) {
+      this.radarLineGraphics.clear();
+    }
+
+    const lanePositions = {
+      [-1]: viewport.width * 0.25,
+      [0]: viewport.width * 0.5,
+      [1]: viewport.width * 0.75
+    };
+    const laneLabels = {
+      [-1]: 'LEFT',
+      [0]: 'CENTER',
+      [1]: 'RIGHT'
+    };
+    const topY = viewport.height * 0.22;
+    const bottomY = viewport.height - 36;
+    const now = this.scene.time?.now || Date.now();
+
+    this.ensurePoolSize(this.radarHintTexts, hints.length, () =>
+      this.scene.add.text(0, 0, '', {
+        fontFamily: 'Orbitron, Arial, sans-serif',
+        fontSize: '17px',
+        fontStyle: '700',
+        color: '#ffd95f',
+        align: 'center'
+      }).setOrigin(0.5, 1).setDepth(20)
+    );
+
+    hints.forEach((hint, index) => {
+      const lx = lanePositions[hint.lane] ?? (viewport.width / 2);
+      const maxTimer = Math.max(0.1, Number(hint.maxTimer) || 1.8);
+      const timer = Math.max(0, Number(hint.timer) || 0);
+      const pulse = (Math.sin(now * 0.02) + 1) / 2;
+      const alpha = (0.35 + pulse * 0.65) * (timer / maxTimer);
+
+      if (this.radarLineGraphics) {
+        this.radarLineGraphics.lineStyle(7 + pulse * 3, 0xffcc33, Math.min(1, alpha * 0.45));
+        this.radarLineGraphics.beginPath();
+        this.radarLineGraphics.moveTo(lx, topY);
+        this.radarLineGraphics.lineTo(lx, bottomY);
+        this.radarLineGraphics.strokePath();
+        this.radarLineGraphics.lineStyle(2, 0xffef9a, Math.min(1, alpha + 0.15));
+        this.radarLineGraphics.beginPath();
+        this.radarLineGraphics.moveTo(lx, topY);
+        this.radarLineGraphics.lineTo(lx, bottomY);
+        this.radarLineGraphics.strokePath();
+      }
+
+      const label = this.radarHintTexts[index];
+      label
+        .setText(`🟡 NEXT GOLD: ${laneLabels[hint.lane] || 'CENTER'}`)
+        .setPosition(lx, topY - 8)
+        .setAlpha(Math.min(1, alpha + 0.2))
+        .setVisible(true);
+    });
+  }
+
+  renderSpinAlert() {
+    const viewport = this.snapshot?.viewport;
+    const fx = this.snapshot?.fx;
+    if (!viewport || !fx || !this.spinAlertBackdrop || !this.spinAlertText) return;
+
+    const timer = Number(fx.spinAlertTimer) || 0;
+    if (timer <= 0) {
+      this.spinAlertBackdrop.setVisible(false);
+      this.spinAlertText.setVisible(false);
+      return;
+    }
+
+    const now = this.scene.time?.now || Date.now();
+    const centerX = viewport.width * 0.5;
+    const centerY = viewport.height * 0.18;
+    let text = '';
+    let color = '#ffcc00';
+    let fontSize = 24;
+    let width = 320;
+    let height = 56;
+    let alpha = Math.min(1, timer);
+
+    if ((Number(fx.spinAlertLevel) || 0) >= 2 && (Number(fx.spinAlertCountdown) || 0) > 0) {
+      const countNum = Math.ceil(Number(fx.spinAlertCountdown) || 0);
+      const pulse = (Math.sin(now * 0.015) + 1) / 2;
+      text = `🔔 ${countNum}...`;
+      color = countNum <= 1 ? '#ff4444' : '#ffcc00';
+      fontSize = 32;
+      width = 260;
+      height = 60;
+      alpha = 0.85 + pulse * 0.15;
+    } else if (fx.perfectSpinWindow) {
+      const pulse = (Math.sin(now * 0.025) + 1) / 2;
+      text = '✨ PRESS SPIN!';
+      color = '#00ffaa';
+      fontSize = 34;
+      width = 300;
+      height = 70;
+      alpha = 0.9 + pulse * 0.1;
+    } else if ((Number(fx.spinAlertLevel) || 0) >= 1) {
+      text = '🔔 SPIN RING!';
+      color = '#ffcc00';
+      fontSize = 24;
+      width = 320;
+      height = 56;
+      alpha = Math.min(1, timer);
+    }
+
+    if (!text) {
+      this.spinAlertBackdrop.setVisible(false);
+      this.spinAlertText.setVisible(false);
+      return;
+    }
+
+    this.spinAlertBackdrop
+      .setPosition(centerX, centerY)
+      .setSize(width, height)
+      .setAlpha(alpha)
+      .setVisible(true);
+
+    this.spinAlertText
+      .setPosition(centerX, centerY)
+      .setText(text)
+      .setColor(color)
+      .setFontSize(fontSize)
+      .setAlpha(alpha)
+      .setVisible(true);
   }
 
 }

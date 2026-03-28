@@ -324,8 +324,8 @@ class TunnelRenderer {
 
   drawMouthRing(centerX, centerY, tube) {
     const rimColor = 0xaedcff;
-    const outerRadius = CONFIG.TUBE_RADIUS * 1.12;
-    const innerRadius = CONFIG.TUBE_RADIUS;
+    const outerRadius = CONFIG.TUBE_RADIUS * 1.16;
+    const innerRadius = CONFIG.TUBE_RADIUS * 1.045;
     const centerShift = Math.hypot(tube.centerOffsetX || 0, tube.centerOffsetY || 0);
     const shiftBoost = clamp(centerShift / 120, 0, 0.22);
 

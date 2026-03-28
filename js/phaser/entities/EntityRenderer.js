@@ -290,9 +290,12 @@ class EntityRenderer {
         const obstacleGrowthStartZ = 1.0;
         const obstacleNearZ = CONFIG.PLAYER_Z;
         const approachRange = Math.max(0.001, obstacleGrowthStartZ - obstacleNearZ);
+        const hasPassedPlayer = item.z < obstacleNearZ;
         const isApproachingPlayer = item.z <= obstacleGrowthStartZ && item.z >= obstacleNearZ;
         const approachTLinear = clamp((obstacleGrowthStartZ - item.z) / approachRange, 0, 1);
-        const growth = 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0);
+        const growth = hasPassedPlayer
+          ? 2.5
+          : 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0);
         const size = Math.max(36, FRAME_SIZE * projection.scale) * growth;
         sprite.setTexture(textureKey, frameMap[item.subtype] || 0);
         sprite.setPosition(projection.x, projection.y);

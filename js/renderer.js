@@ -727,9 +727,12 @@ function drawObjects() {
       const obstacleGrowthStartZ = 1.0;
       const obstacleNearZ = CONFIG.PLAYER_Z;
       const approachRange = Math.max(0.001, obstacleGrowthStartZ - obstacleNearZ);
+      const hasPassedPlayer = o.z < obstacleNearZ;
       const isApproachingPlayer = o.z <= obstacleGrowthStartZ && o.z >= obstacleNearZ;
       const approachTLinear = Math.max(0, Math.min(1, (obstacleGrowthStartZ - o.z) / approachRange));
-      const growthMul = 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0); // 1.0 -> 2.5
+      const growthMul = hasPassedPlayer
+        ? 2.5
+        : 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0); // 1.0 -> 2.5
 
       const baseSize = Math.max(36, CONFIG.FRAME_SIZE * p.scale);
       const sz = baseSize * growthMul;

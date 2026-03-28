@@ -15,6 +15,7 @@ const TUNNEL_OUTER_RING_SOURCE_HEIGHT = 1365;
 const TUNNEL_OUTER_RING_INNER_RADIUS_X = 393;
 const TUNNEL_OUTER_RING_INNER_RADIUS_Y = 393;
 const TUNNEL_OUTER_RING_FIT_SCALE = 1.1;
+const TUNNEL_OUTER_RING_VERTICAL_OFFSET = 6;
 
 const DEFAULT_VFX_CONFIG = Object.freeze({
   particlesEnabled: true,
@@ -57,7 +58,7 @@ class TunnelOuterRing {
 
   constructor(scene, config = {}) {
     const centerX = scene.scale.width * 0.5;
-    const centerY = scene.scale.height * 0.5;
+    const centerY = scene.scale.height * 0.5 + TUNNEL_OUTER_RING_VERTICAL_OFFSET;
 
     this.scene = scene;
     this.rotationSpeed = DEFAULT_ROTATION_SPEED;

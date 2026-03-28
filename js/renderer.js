@@ -1132,16 +1132,27 @@ function drawTubeBezel() {
 
   if (metalImg) {
     const metalScaleBoost = 1.03;
+    const metalInnerHoleScale = 1.05;
     const metalDrawW = Math.round(drawW * metalScaleBoost);
     const metalDrawH = Math.round(drawH * metalScaleBoost);
     const metalDx = cx - metalDrawW / 2;
     const metalDy = bezelCy - metalDrawH / 2;
     ctx.drawImage(metalImg, metalDx, metalDy, metalDrawW, metalDrawH);
 
+    // Increase only the inner diameter of the metal layer.
+    const metalInnerHoleRx = tubeRadiusX * metalInnerHoleScale;
+    const metalInnerHoleRy = tubeRadiusY * metalInnerHoleScale;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.ellipse(cx, bezelCy, metalInnerHoleRx, metalInnerHoleRy, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     // Soft darkened falloff on metal edges for stronger pipe framing.
     const rimWidth = Math.max(14, Math.round(Math.min(metalDrawW, metalDrawH) * 0.022));
-    const innerRx = metalDrawW / 2 - rimWidth * 2.2;
-    const innerRy = metalDrawH / 2 - rimWidth * 2.2;
+    const innerRx = Math.max(metalInnerHoleRx + rimWidth * 0.8, metalDrawW / 2 - rimWidth * 2.2);
+    const innerRy = Math.max(metalInnerHoleRy + rimWidth * 0.8, metalDrawH / 2 - rimWidth * 2.2);
 
     ctx.save();
     if ('filter' in ctx) ctx.filter = 'blur(6px)';

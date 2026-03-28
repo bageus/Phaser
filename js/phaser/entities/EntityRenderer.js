@@ -50,11 +50,6 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function smoothstep(edge0, edge1, value) {
-  const t = clamp((value - edge0) / Math.max(0.0001, edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
 function getPlayerTextureKey(player, runtime) {
   if (player?.spinActive) {
     return PLAYER_TEXTURES.spin;
@@ -292,7 +287,12 @@ class EntityRenderer {
         const sprite = this.obstacleSprites[obstacleIndex++];
         const textureKey = OBSTACLE_TEXTURES[item.subtype] || 'obstacles_1';
         const frameMap = { fence: 0, rock1: 1, rock2: 2, bull: 3, wall_brick: 0, wall_kactus: 1, tree: 2, pit: 0, spikes: 1, bottles: 2 };
-        const growth = 1 + 1.5 * smoothstep(1.0, CONFIG.PLAYER_Z, item.z);
+        const obstacleGrowthStartZ = 1.0;
+        const obstacleNearZ = CONFIG.PLAYER_Z;
+        const approachRange = Math.max(0.001, obstacleGrowthStartZ - obstacleNearZ);
+        const isApproachingPlayer = item.z <= obstacleGrowthStartZ && item.z >= obstacleNearZ;
+        const approachTLinear = clamp((obstacleGrowthStartZ - item.z) / approachRange, 0, 1);
+        const growth = 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0);
         const size = Math.max(36, FRAME_SIZE * projection.scale) * growth;
         sprite.setTexture(textureKey, frameMap[item.subtype] || 0);
         sprite.setPosition(projection.x, projection.y);

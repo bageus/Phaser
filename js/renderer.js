@@ -722,14 +722,14 @@ function drawObjects() {
       const atlasImage = assetManager.getAsset(info.atlas);
       if (!atlasImage) continue;
       
-       // Obstacles should not grow right after spawn.
-      // Keep x1.0 size in far zone, then smoothly grow in the near-approach zone.
+      // Obstacles should not grow right after spawn.
+      // Keep x1.0 size in far zone, then linearly grow only while approaching player.
       const obstacleGrowthStartZ = 1.0;
       const obstacleNearZ = CONFIG.PLAYER_Z;
       const approachRange = Math.max(0.001, obstacleGrowthStartZ - obstacleNearZ);
+      const isApproachingPlayer = o.z <= obstacleGrowthStartZ && o.z >= obstacleNearZ;
       const approachTLinear = Math.max(0, Math.min(1, (obstacleGrowthStartZ - o.z) / approachRange));
-      const approachTSmooth = approachTLinear * approachTLinear * (3 - 2 * approachTLinear); // smoothstep
-      const growthMul = 1 + 1.5 * approachTSmooth; // 1.0 -> 2.5
+      const growthMul = 1 + (isApproachingPlayer ? 1.5 * approachTLinear : 0); // 1.0 -> 2.5
 
       const baseSize = Math.max(36, CONFIG.FRAME_SIZE * p.scale);
       const sz = baseSize * growthMul;

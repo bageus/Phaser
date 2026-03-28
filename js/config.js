@@ -30,9 +30,9 @@ const CONFIG = {
   SPEED_INCREMENT_BOOST_MULTIPLIER: 2,
   SPEED_BONUS_AMOUNT: 0.004,
 
-  TUBE_SEGMENTS: 32,
-  TUBE_DEPTH_STEPS: 186,
-  TUBE_Z_STEP: 0.086,
+  TUBE_SEGMENTS: 28,
+  TUBE_DEPTH_STEPS: 108,
+  TUBE_Z_STEP: 0.072,
   BASE_ROTATION_SPEED: 1.2,
   MAX_ROTATION_SPEED: 3,
 
@@ -76,8 +76,9 @@ const CONFIG = {
 // Mobile detection — reduce tube polygon count for performance
 const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || (window.innerWidth < 600);
 if (isMobile) {
-  CONFIG.TUBE_SEGMENTS = 20;
-  CONFIG.TUBE_DEPTH_STEPS = 48;
+  CONFIG.TUBE_SEGMENTS = 16;
+  CONFIG.TUBE_DEPTH_STEPS = 60;
+  CONFIG.TUBE_Z_STEP = 0.072;
 }
 
 const RENDER_BACKENDS = Object.freeze({

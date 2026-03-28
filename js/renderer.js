@@ -1131,12 +1131,17 @@ function drawTubeBezel() {
   const now = Date.now();
 
   if (metalImg) {
-    ctx.drawImage(metalImg, dx, dy, drawW, drawH);
+    const metalScaleBoost = 1.03;
+    const metalDrawW = Math.round(drawW * metalScaleBoost);
+    const metalDrawH = Math.round(drawH * metalScaleBoost);
+    const metalDx = cx - metalDrawW / 2;
+    const metalDy = bezelCy - metalDrawH / 2;
+    ctx.drawImage(metalImg, metalDx, metalDy, metalDrawW, metalDrawH);
 
     // Soft darkened falloff on metal edges for stronger pipe framing.
-    const rimWidth = Math.max(14, Math.round(Math.min(drawW, drawH) * 0.022));
-    const innerRx = drawW / 2 - rimWidth * 2.2;
-    const innerRy = drawH / 2 - rimWidth * 2.2;
+    const rimWidth = Math.max(14, Math.round(Math.min(metalDrawW, metalDrawH) * 0.022));
+    const innerRx = metalDrawW / 2 - rimWidth * 2.2;
+    const innerRy = metalDrawH / 2 - rimWidth * 2.2;
 
     ctx.save();
     if ('filter' in ctx) ctx.filter = 'blur(6px)';
@@ -1144,7 +1149,7 @@ function drawTubeBezel() {
     ctx.strokeStyle = 'rgba(6, 6, 14, 0.62)';
     ctx.lineWidth = rimWidth;
     ctx.beginPath();
-    ctx.ellipse(cx, bezelCy, drawW / 2 - rimWidth * 0.35, drawH / 2 - rimWidth * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, bezelCy, metalDrawW / 2 - rimWidth * 0.35, metalDrawH / 2 - rimWidth * 0.35, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.strokeStyle = 'rgba(6, 6, 14, 0.35)';

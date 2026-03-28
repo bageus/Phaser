@@ -1131,8 +1131,8 @@ function drawTubeBezel() {
   const now = Date.now();
 
   if (metalImg) {
-    const metalScaleBoost = 1.03;
-    const metalInnerHoleScale = 1.05;
+    const metalScaleBoost = 2.03;
+    const metalInnerHoleScale = 2.05;
     const metalDrawW = Math.round(drawW * metalScaleBoost);
     const metalDrawH = Math.round(drawH * metalScaleBoost);
     const metalDx = cx - metalDrawW / 2;

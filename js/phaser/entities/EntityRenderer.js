@@ -270,7 +270,10 @@ class EntityRenderer {
     const textureKey = getPlayerTextureKey(player);
     const frameCount = this.scene.textures.get(textureKey)?.frameTotal || 1;
     const frameIndex = textureKey === PLAYER_TEXTURES.spin
-      ? Math.floor((player.spinProgress || 0) * Math.max(1, frameCount - 1)) % Math.max(1, frameCount)
+      ? Math.floor(
+        clamp((player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON), 0, 1)
+          * Math.max(1, frameCount - 1)
+      ) % Math.max(1, frameCount)
       : Math.round(player.frameIndex || 0) % Math.max(1, frameCount);
 
     this.playerSprite.setTexture(textureKey, frameIndex);

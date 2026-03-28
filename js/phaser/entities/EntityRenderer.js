@@ -41,6 +41,28 @@ const OBSTACLE_TEXTURES = {
 
 const FRAME_SIZE = 64;
 const PLAYER_FRAME_SIZE = 128;
+const WIDE_BONUS_TEXTURES = new Set(['bonus_chkey', 'bonus_score_plus', 'bonus_score_minus']);
+
+const BONUS_FRAME_DEFS = {
+  bonus_chkey: [
+    { name: 'invert_0', x: 0, y: 0, width: 128, height: 64 },
+    { name: 'invert_1', x: 128, y: 0, width: 128, height: 64 },
+  ],
+  bonus_score_plus: [
+    { name: 'score_300_0', x: 0, y: 0, width: 128, height: 64 },
+    { name: 'score_300_1', x: 128, y: 0, width: 64, height: 64 },
+    { name: 'score_500_0', x: 192, y: 0, width: 128, height: 64 },
+    { name: 'score_500_1', x: 320, y: 0, width: 64, height: 64 },
+    { name: 'x2_0', x: 384, y: 0, width: 128, height: 64 },
+    { name: 'x2_1', x: 512, y: 0, width: 64, height: 64 },
+  ],
+  bonus_score_minus: [
+    { name: 'score_minus_300_0', x: 0, y: 0, width: 128, height: 64 },
+    { name: 'score_minus_300_1', x: 128, y: 0, width: 64, height: 64 },
+    { name: 'score_minus_500_0', x: 192, y: 0, width: 128, height: 64 },
+    { name: 'score_minus_500_1', x: 320, y: 0, width: 64, height: 64 },
+  ],
+};
 function assetUrl(path) {
   const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
   return `${normalizedBase}${path}`;
@@ -112,32 +134,45 @@ function projectPolar(angle, z, viewport, tube, radiusFactor = 0.65) {
 
 function getBonusFrame(item) {
   const frame = item.animFrame || 0;
+  const toggle = Math.floor(frame / 4) % 2;
   switch (item.type) {
     case BONUS_TYPES.SHIELD:
       return frame % 4;
     case BONUS_TYPES.SPEED_DOWN:
-      return Math.floor(frame / 4) % 2;
+      return toggle;
     case BONUS_TYPES.SPEED_UP:
-      return 2 + (Math.floor(frame / 4) % 2);
+      return 2 + toggle;
     case BONUS_TYPES.MAGNET:
       return Math.floor(frame / 2) % 6;
     case BONUS_TYPES.INVERT:
-      return Math.floor(frame / 4) % 2;
+      return `invert_${toggle}`;
     case BONUS_TYPES.SCORE_300:
-      return Math.floor(frame / 4) % 2;
+      return `score_300_${toggle}`;
     case BONUS_TYPES.SCORE_500:
-      return 2 + (Math.floor(frame / 4) % 2);
+      return `score_500_${toggle}`;
     case BONUS_TYPES.X2:
-      return 4 + (Math.floor(frame / 4) % 2);
+      return `x2_${toggle}`;
     case BONUS_TYPES.SCORE_MINUS_300:
-      return Math.floor(frame / 4) % 2;
+      return `score_minus_300_${toggle}`;
     case BONUS_TYPES.SCORE_MINUS_500:
-      return 2 + (Math.floor(frame / 4) % 2);
+      return `score_minus_500_${toggle}`;
     case BONUS_TYPES.RECHARGE:
       return Math.floor(frame / 3) % 5;
     default:
       return 0;
   }
+}
+
+function registerCustomBonusFrames(scene) {
+  Object.entries(BONUS_FRAME_DEFS).forEach(([textureKey, frames]) => {
+    const texture = scene.textures.get(textureKey);
+    if (!texture) return;
+    frames.forEach((frameDef) => {
+      if (!texture.has(frameDef.name)) {
+        texture.add(frameDef.name, 0, frameDef.x, frameDef.y, frameDef.width, frameDef.height);
+      }
+    });
+  });
 }
 
 class EntityRenderer {
@@ -150,6 +185,10 @@ class EntityRenderer {
     });
 
     ['coins_gold', 'coins_silver', ...Object.values(BONUS_TEXTURES), ...Object.values(OBSTACLE_TEXTURES)].forEach((key) => {
+      if (WIDE_BONUS_TEXTURES.has(key)) {
+        scene.load.image(key, assetUrl(`assets/${key}.png`));
+        return;
+      }
       scene.load.spritesheet(key, assetUrl(`assets/${key}.png`), {
         frameWidth: FRAME_SIZE,
         frameHeight: FRAME_SIZE,
@@ -173,6 +212,7 @@ class EntityRenderer {
   }
 
   create() {
+    registerCustomBonusFrames(this.scene);
     this.root = this.scene.add.container(0, 0).setDepth(12);
     this.objectLayer = this.scene.add.container(0, 0).setDepth(12);
     this.playerLayer = this.scene.add.container(0, 0).setDepth(13);

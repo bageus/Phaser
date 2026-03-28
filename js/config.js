@@ -31,8 +31,8 @@ const CONFIG = {
   SPEED_BONUS_AMOUNT: 0.004,
 
   TUBE_SEGMENTS: 28,
-  TUBE_DEPTH_STEPS: 86,
-  TUBE_Z_STEP: 0.086,
+  TUBE_DEPTH_STEPS: 108,
+  TUBE_Z_STEP: 0.072,
   BASE_ROTATION_SPEED: 1.2,
   MAX_ROTATION_SPEED: 3,
 
@@ -77,7 +77,8 @@ const CONFIG = {
 const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || (window.innerWidth < 600);
 if (isMobile) {
   CONFIG.TUBE_SEGMENTS = 16;
-  CONFIG.TUBE_DEPTH_STEPS = 48;
+  CONFIG.TUBE_DEPTH_STEPS = 60;
+  CONFIG.TUBE_Z_STEP = 0.072;
 }
 
 const RENDER_BACKENDS = Object.freeze({

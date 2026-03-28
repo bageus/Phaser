@@ -71,37 +71,6 @@ const CONFIG = {
     speedMax: 0.25,
   },
 
-  WARP_TUNNEL_STREAK_VFX: {
-    enabled: true,
-    activeStreaks: 1,
-    respawnDelayMs: 70,
-    lifeMinMs: 520,
-    lifeMaxMs: 780,
-    alphaMin: 0.08,
-    alphaMax: 0.32,
-    glowAlphaFactor: 0.58,
-    glowScaleX: 1.95,
-    glowScaleY: 1.18,
-    plasmaPulseHz: 5.6,
-    plasmaPulseAmount: 0.28,
-    startDepth: 0.15,
-    endDepth: 1.06,
-    widthMin: 0.16,
-    widthMax: 0.3,
-    heightMin: 0.9,
-    heightMax: 1.45,
-    leftWallAngle: Math.PI,
-<<<<<<< codex/add-energy-streak-visual-effect-ekyaml
-    angleJitter: 0,
-    driftMin: 0,
-    driftMax: 0,
-=======
-    angleJitter: 0.06,
-    driftMin: 0.04,
-    driftMax: 0.12,
->>>>>>> main
-    depth: 11,
-  }
 };
 
 // Mobile detection — reduce tube polygon count for performance

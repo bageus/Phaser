@@ -1,6 +1,7 @@
 import { CONFIG } from '../../config.js';
 
 const INNER_RADIUS_RATIO = 0.15;
+const MOUTH_EXTENSION_DEPTH = 2.4;
 const LANE_ANGLE_STEP = 0.55;
 const TRACK_LANE_CENTERS = Object.freeze([-1, 0, 1]);
 const TRACK_BAND_HALF_WIDTH = 0.24;
@@ -419,8 +420,10 @@ class TunnelRenderer {
     const trackSlatOverlays = [];
     for (const depthEntry of depthEntries) {
       const { animatedDepth, spawnBlend } = depthEntry;
-      const z1 = animatedDepth * CONFIG.TUBE_Z_STEP;
-      const z2 = (animatedDepth + quality.depthStep) * CONFIG.TUBE_Z_STEP;
+      const extendedDepth1 = Math.max(0, animatedDepth - MOUTH_EXTENSION_DEPTH);
+      const extendedDepth2 = Math.max(0, animatedDepth + quality.depthStep - MOUTH_EXTENSION_DEPTH);
+      const z1 = extendedDepth1 * CONFIG.TUBE_Z_STEP;
+      const z2 = extendedDepth2 * CONFIG.TUBE_Z_STEP;
       const scale1 = 1 - z1;
       const scale2 = 1 - z2;
       if (scale2 <= 0) continue;

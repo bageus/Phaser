@@ -561,7 +561,8 @@ class EntityRenderer {
       return;
     }
 
-    const alpha = Math.min(1, timer / 20);
+    const fadeFrames = Math.max(1, CONFIG.BONUS_TEXT_FADE_FRAMES || 30);
+    const alpha = timer > fadeFrames ? 1 : Math.min(1, timer / fadeFrames);
     this.bonusTextLabel
       .setPosition(viewport.width * 0.5, viewport.height * 0.28)
       .setText(text)

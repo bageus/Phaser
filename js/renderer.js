@@ -967,7 +967,10 @@ function drawBonusText() {
   gameState.bonusTextTimer--;
   if (gameState.bonusTextTimer <= 0) return;
 
-  const alpha = Math.min(1, gameState.bonusTextTimer / 20);
+  const fadeFrames = Math.max(1, CONFIG.BONUS_TEXT_FADE_FRAMES || 30);
+  const alpha = gameState.bonusTextTimer > fadeFrames
+    ? 1
+    : Math.min(1, gameState.bonusTextTimer / fadeFrames);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = "rgba(0,0,0,0.7)";

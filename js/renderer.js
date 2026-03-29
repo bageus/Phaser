@@ -150,8 +150,9 @@ function projectPlayer(z) {
 }
 
 function getSpinFrameIndex(spinProgress, totalFrames) {
-  const exactFrame = spinProgress * totalFrames;
-  return Math.max(0, Math.round(exactFrame) % totalFrames);
+  const safeTotalFrames = Math.max(1, Number(totalFrames) || 1);
+  const progress = Math.max(0, Math.min(1, Number(spinProgress) || 0));
+  return Math.min(safeTotalFrames - 1, Math.floor(progress * safeTotalFrames));
 }
 
 function updatePlayerAnimation(delta) {

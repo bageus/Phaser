@@ -12,6 +12,15 @@ const PLAYER_TEXTURES = {
   spin: 'character_spin',
 };
 
+const PLAYER_FRAME_COUNTS = {
+  [PLAYER_TEXTURES.idle_back]: 12,
+  [PLAYER_TEXTURES.idle_left]: 12,
+  [PLAYER_TEXTURES.idle_right]: 12,
+  [PLAYER_TEXTURES.swipe_left]: 3,
+  [PLAYER_TEXTURES.swipe_right]: 3,
+  [PLAYER_TEXTURES.spin]: 14,
+};
+
 const BONUS_TEXTURES = {
   [BONUS_TYPES.SHIELD]: 'bonus_shield',
   [BONUS_TYPES.SPEED_DOWN]: 'bonus_speed',
@@ -95,7 +104,8 @@ function projectLane(lane, z, viewport, tube, includeSpinRotation = false, playe
   let angle = safeLane * LANE_ANGLE_STEP;
 
   if (includeSpinRotation && player?.spinActive) {
-    angle += (player.spinProgress || 0) * Math.PI * 2;
+    const spinProgress = (player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON);
+    angle += spinProgress * Math.PI * 2;
   }
 
   return {
@@ -113,13 +123,22 @@ function projectLane(lane, z, viewport, tube, includeSpinRotation = false, playe
 }
 
 
-function getNumericSpriteFrameCount(scene, textureKey) {
+function getPlayerFrameCount(scene, textureKey) {
+  const configuredCount = PLAYER_FRAME_COUNTS[textureKey];
+  if (Number.isFinite(configuredCount) && configuredCount > 0) return configuredCount;
+
   const texture = scene?.textures?.get(textureKey);
   if (!texture) return 1;
   const numericFrames = texture.getFrameNames().filter((name) => /^\d+$/.test(name));
   if (numericFrames.length > 0) return numericFrames.length;
   const fallback = Number(texture.frameTotal) - 1;
   return Number.isFinite(fallback) && fallback > 0 ? fallback : 1;
+}
+
+function getSpinFrameIndex(spinProgress, totalFrames) {
+  const safeTotalFrames = Math.max(1, Number(totalFrames) || 1);
+  const progress = clamp(Number(spinProgress) || 0, 0, 1);
+  return Math.min(safeTotalFrames - 1, Math.floor(progress * safeTotalFrames));
 }
 
 function projectPolar(angle, z, viewport, tube, radiusFactor = 0.65) {
@@ -303,14 +322,11 @@ class EntityRenderer {
       : player.lane;
     const projection = projectLane(laneValue, CONFIG.PLAYER_Z, viewport, tube, true, player);
     const textureKey = getPlayerTextureKey(player);
-    const frameCount = getNumericSpriteFrameCount(this.scene, textureKey);
+    const frameCount = getPlayerFrameCount(this.scene, textureKey);
     const frameIndex = textureKey === PLAYER_TEXTURES.spin
-      ? Math.min(
-        Math.max(0, frameCount - 1),
-        Math.floor(
-          clamp((player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON), 0, 1)
-          * frameCount
-        )
+      ? getSpinFrameIndex(
+        (player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON),
+        frameCount
       )
       : Math.round(player.frameIndex || 0) % Math.max(1, frameCount);
 

@@ -112,6 +112,16 @@ function projectLane(lane, z, viewport, tube, includeSpinRotation = false, playe
   };
 }
 
+
+function getNumericSpriteFrameCount(scene, textureKey) {
+  const texture = scene?.textures?.get(textureKey);
+  if (!texture) return 1;
+  const numericFrames = texture.getFrameNames().filter((name) => /^\d+$/.test(name));
+  if (numericFrames.length > 0) return numericFrames.length;
+  const fallback = Number(texture.frameTotal) - 1;
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 1;
+}
+
 function projectPolar(angle, z, viewport, tube, radiusFactor = 0.65) {
   const safeZ = clamp(Number.isFinite(z) ? z : 1, 0, 2);
   const scale = Math.max(0.05, 1 - safeZ);
@@ -293,12 +303,15 @@ class EntityRenderer {
       : player.lane;
     const projection = projectLane(laneValue, CONFIG.PLAYER_Z, viewport, tube, true, player);
     const textureKey = getPlayerTextureKey(player);
-    const frameCount = this.scene.textures.get(textureKey)?.frameTotal || 1;
+    const frameCount = getNumericSpriteFrameCount(this.scene, textureKey);
     const frameIndex = textureKey === PLAYER_TEXTURES.spin
-      ? Math.floor(
-        clamp((player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON), 0, 1)
-          * Math.max(1, frameCount - 1)
-      ) % Math.max(1, frameCount)
+      ? Math.min(
+        Math.max(0, frameCount - 1),
+        Math.floor(
+          clamp((player.spinProgress || 0) / Math.max(CONFIG.SPIN_DURATION, Number.EPSILON), 0, 1)
+          * frameCount
+        )
+      )
       : Math.round(player.frameIndex || 0) % Math.max(1, frameCount);
 
     this.playerSprite.setTexture(textureKey, frameIndex);

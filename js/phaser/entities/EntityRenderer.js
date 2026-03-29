@@ -240,6 +240,7 @@ class EntityRenderer {
     this.radarHintTexts = [];
     this.spinAlertBackdrop = null;
     this.spinAlertText = null;
+    this.bonusTextLabel = null;
     this.playerSprite = null;
     this.playerShadow = null;
   }
@@ -270,6 +271,19 @@ class EntityRenderer {
       .setOrigin(0.5, 0.5)
       .setDepth(20)
       .setVisible(false);
+
+    this.bonusTextLabel = this.scene.add.text(0, 0, '', {
+      fontFamily: 'Orbitron, Arial, sans-serif',
+      fontSize: '32px',
+      fontStyle: '700',
+      color: '#ffd54f',
+      stroke: '#000000',
+      strokeThickness: 5,
+      align: 'center'
+    })
+      .setOrigin(0.5, 0.5)
+      .setDepth(21)
+      .setVisible(false);
   }
 
   destroyPool(pool) {
@@ -286,6 +300,7 @@ class EntityRenderer {
     this.radarLineGraphics?.destroy();
     this.spinAlertBackdrop?.destroy();
     this.spinAlertText?.destroy();
+    this.bonusTextLabel?.destroy();
     this.playerSprite?.destroy();
     this.playerShadow?.destroy();
     this.root?.destroy();
@@ -309,6 +324,7 @@ class EntityRenderer {
     this.renderSpinTargets();
     this.renderRadarHints();
     this.renderSpinAlert();
+    this.renderBonusText();
   }
 
   renderPlayer() {
@@ -530,6 +546,27 @@ class EntityRenderer {
         .setAlpha(Math.min(1, alpha + 0.2))
         .setVisible(true);
     });
+  }
+
+
+  renderBonusText() {
+    const viewport = this.snapshot?.viewport;
+    const fx = this.snapshot?.fx;
+    if (!viewport || !fx || !this.bonusTextLabel) return;
+
+    const timer = Number(fx.bonusTextTimer) || 0;
+    const text = String(fx.bonusText || '').trim();
+    if (timer <= 0 || !text) {
+      this.bonusTextLabel.setVisible(false);
+      return;
+    }
+
+    const alpha = Math.min(1, timer / 20);
+    this.bonusTextLabel
+      .setPosition(viewport.width * 0.5, viewport.height * 0.28)
+      .setText(text)
+      .setAlpha(alpha)
+      .setVisible(true);
   }
 
   renderSpinAlert() {

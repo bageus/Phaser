@@ -7,7 +7,7 @@ import { createIconAtlas, clearNode } from './dom-render.js';
 
 function showBonusText(text) {
   gameState.bonusText = text;
-  gameState.bonusTextTimer = 90;
+  gameState.bonusTextTimer = CONFIG.BONUS_TEXT_DELAY_FRAMES + CONFIG.BONUS_TEXT_FADE_FRAMES;
 }
 
 function showStore() {

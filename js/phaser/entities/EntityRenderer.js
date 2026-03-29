@@ -1,7 +1,11 @@
 import { BONUS_TYPES, CONFIG } from '../../config.js';
+import { gameState } from '../../state.js';
 
 const LANE_ANGLE_STEP = 0.55;
 const BASE_URL = import.meta.env.BASE_URL || './';
+const BONUS_TEXT_DELAY_FRAMES = 60;
+const BONUS_TEXT_FADE_FRAMES = 30;
+const FRAME_MS_60FPS = 1000 / 60;
 
 const PLAYER_TEXTURES = {
   idle_back: 'character_back_idle',
@@ -561,12 +565,21 @@ class EntityRenderer {
       return;
     }
 
-    const alpha = Math.min(1, timer / 20);
+    let alpha = 1;
+    if (timer <= BONUS_TEXT_FADE_FRAMES) {
+      alpha = Math.min(1, timer / BONUS_TEXT_FADE_FRAMES);
+    } else if (timer < BONUS_TEXT_DELAY_FRAMES + BONUS_TEXT_FADE_FRAMES) {
+      alpha = 1;
+    }
+
     this.bonusTextLabel
       .setPosition(viewport.width * 0.5, viewport.height * 0.28)
       .setText(text)
       .setAlpha(alpha)
       .setVisible(true);
+
+    const frameDelta = Math.max(0.25, (Number(this.scene.game?.loop?.delta) || FRAME_MS_60FPS) / FRAME_MS_60FPS);
+    gameState.bonusTextTimer = Math.max(0, gameState.bonusTextTimer - frameDelta);
   }
 
   renderSpinAlert() {
